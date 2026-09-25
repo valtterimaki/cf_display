@@ -43,6 +43,12 @@ public abstract class CoreScreen {
   abstract void drawOutro();
 
   /**
+   * React to input that isn't handled globally (e.g. knob turns). Optional.
+   * SKIP, SHOW_SCREEN and TOGGLE_DEBUG are handled by the main sketch, not here.
+   */
+  void onAction(HwAction action) {}
+
+  /**
    * Return true to keep the same instance between showings (state is kept).
    * Default false: a fresh instance is created every time the screen is shown.
    */

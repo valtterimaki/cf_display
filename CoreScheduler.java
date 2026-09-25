@@ -102,6 +102,16 @@ public class CoreScheduler {
     }
   }
 
+  /** Registered screen ids, in registration order. */
+  public List<String> registeredIds() {
+    return new ArrayList<>(factories.keySet());
+  }
+
+  /** Pass an action to the current screen (ignored during a transition). */
+  public void sendToScreen(HwAction action) {
+    if (current != null && !inTransition) current.onAction(action);
+  }
+
   // --- info for the debug view ---
 
   public String currentId() {

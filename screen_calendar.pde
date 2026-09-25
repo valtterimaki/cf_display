@@ -12,6 +12,14 @@ class ScreenCalendar extends CoreScreen {
   final float ROW_HEIGHT = 90;
   final float TOP = 200;
 
+  int selectedRow = 0;   // moved with the knob (mouse wheel / , . in simulation)
+
+  void onAction(HwAction action) {
+    if (action.type == HwAction.Type.ENCODER_TURN) {
+      selectedRow = constrain(selectedRow + action.value, 0, ROWS - 1);
+    }
+  }
+
   void drawIntro() {
     background(28, 26, 36);
     drawTitle(255 * tl.progress(0, 0.4));
@@ -52,7 +60,8 @@ class ScreenCalendar extends CoreScreen {
   void drawRow(int i, float offsetX) {
     float y = TOP + i * ROW_HEIGHT;
     noStroke();
-    fill(70, 60, 110);
+    if (i == selectedRow) fill(120, 100, 190);
+    else fill(70, 60, 110);
     rect(80 + offsetX, y, 560, ROW_HEIGHT - 20, 8);
     fill(240);
     textAlign(LEFT, CENTER);
