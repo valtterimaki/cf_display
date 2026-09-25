@@ -1,0 +1,12 @@
+# Local config with secrets — one per machine, copy from data/config.example.json
+data/config.json
+
+# Processing build/export output
+application.*/
+out/
+build/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,9 @@
+{
+  "hardware": "simulated",
+  "fullscreen": false,
+  "debug": true,
+  "sources": {
+    "weather": "fake",
+    "calendar": "fake"
+  }
+}
