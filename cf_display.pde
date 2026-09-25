@@ -2,9 +2,7 @@
 // Main sketch file. See PLAN.md for architecture.
 
 CoreConfig config;
-
-// TEMPORARY (step 3): shows one screen on repeat. Replaced by the scheduler in step 4.
-CoreScreen currentScreen;
+CoreScheduler scheduler;
 
 void settings() {
   config = new CoreConfig(new File(sketchPath("data")));
@@ -18,20 +16,20 @@ void settings() {
 
 void setup() {
   frameRate(60);
-  currentScreen = new ScreenClock();
-  currentScreen.begin(now());
+
+  scheduler = new CoreScheduler();
+
+  // Screens — registration order is the fallback cycle order
+  scheduler.register("clock",    () -> new ScreenClock());
+  scheduler.register("weather",  () -> new ScreenWeather());
+  scheduler.register("calendar", () -> new ScreenCalendar());
+
+  scheduler.setTransition(new TransitionBasic());
+  scheduler.start(now());
 }
 
 void draw() {
-  currentScreen.update(now());
-
-  // TEMPORARY (step 3): restart the screen when it finishes, with a short gap
-  if (currentScreen.isDone()) {
-    background(0);
-    println("screen DONE, restarting");
-    currentScreen = new ScreenClock();
-    currentScreen.begin(now());
-  }
+  scheduler.update(now());
 }
 
 /** Current time in seconds. The one place the sketch reads the clock. */
