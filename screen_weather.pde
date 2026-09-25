@@ -43,11 +43,18 @@ class ScreenWeather extends CoreScreen {
   }
 
   void drawLabel(float alpha) {
+    DataWeather weather = store.weather();   // null until the first fetch succeeds
+
+    String temperature = weather != null ? fmtTemperature(weather.temperature) : "--°";
+    String details = weather != null
+      ? weather.condition + "   wind " + fmtDecimal(weather.windSpeed, 1) + " m/s"
+      : "no data yet";
+
     fill(240, alpha);
     textAlign(CENTER, CENTER);
     textSize(64);
-    text("--°", width / 2, 500);
+    text(temperature, width / 2, 500);
     textSize(22);
-    text("WEATHER (placeholder)", width / 2, 570);
+    text(details, width / 2, 570);
   }
 }

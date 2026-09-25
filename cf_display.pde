@@ -3,7 +3,9 @@
 
 CoreConfig config;
 CoreScheduler scheduler;
+CoreTriggers triggers;
 HwDevice hardware;
+DataStore store;
 
 boolean debugVisible;
 
@@ -23,6 +25,10 @@ void setup() {
   debugVisible = config.getBoolean("debug", false);
   hardware = createHardware(config.getString("hardware", "simulated"));
 
+  store = new DataStore();
+  store.addSource(createWeatherSource(config.getString("sources.weather", "fake")));
+  store.addSource(createCalendarSource(config.getString("sources.calendar", "fake")));
+
   scheduler = new CoreScheduler();
 
   // Screens — registration order is the fallback cycle order
@@ -32,17 +38,33 @@ void setup() {
 
   scheduler.setTransition(new TransitionBasic());
   scheduler.start(now());
+
+  triggers = new CoreTriggers(store, scheduler);
 }
 
 void draw() {
   hardware.update(now());
   handleActions();
+  triggers.update(now());
   scheduler.update(now());
 }
 
 /** Current time in seconds. The one place the sketch reads the clock. */
 float now() {
   return millis() / 1000.0;
+}
+
+// --- data sources ---
+// Real sources get added here later, e.g. "openmeteo" → new DataWeatherOpenMeteo(store)
+
+DataSource createWeatherSource(String type) {
+  if (!type.equals("fake")) println("[data] WARNING: unknown weather source '" + type + "', using fake");
+  return new DataWeatherFake(store);
+}
+
+DataSource createCalendarSource(String type) {
+  if (!type.equals("fake")) println("[data] WARNING: unknown calendar source '" + type + "', using fake");
+  return new DataCalendarFake(store);
 }
 
 // --- hardware and input ---

@@ -79,6 +79,7 @@ cf_display/                      ← repo root = Processing sketch
 ├── CoreTimeline.java            ← timing toolkit
 ├── CoreEase.java                ← easing functions
 ├── CoreConfig.java              ← loads local config
+├── CoreTriggers.java            ← rules for when data queues a screen
 │
 ├── HwAction.java                ← enum of input actions (SKIP, SHOW_SCREEN, DEBUG, ...)
 ├── HwDevice.java                ← interface: actions in, LEDs out, sensor values
@@ -168,8 +169,9 @@ Building blocks, not effects. All in seconds (float). Time comes from the sketch
   API calls never stall animation.
 - Results go into `DataStore` as simple data objects (`DataWeather`, `DataCalendar`),
   plus a status per source (ok / error / last updated) for the debug view.
-- Sources can **post triggers** to the scheduler queue (e.g. fake calendar source
-  says "event in 5 min" → `request("calendar", HIGH)`).
+- **Triggers** live in `CoreTriggers`, not in the sources: sources only fetch, triggers
+  only decide (e.g. "event in 5 min" → `request("calendar", HIGH)`). A rule keeps
+  working when a fake source is swapped for a real one.
 - Skeleton: only `*Fake` sources, generating plausible changing data.
   Real sources (`DataWeatherOpenMeteo`, `DataCalendarGraph` / ICS, Slack, Harvest…)
   are added later as new files next to the fakes; config picks which one runs.
