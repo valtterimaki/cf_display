@@ -126,6 +126,11 @@ public class CoreScheduler {
     return inTransition;
   }
 
+  /** During a transition: the screen coming next. */
+  public String nextId() {
+    return nextId;
+  }
+
   /** Queued screen ids, highest priority first. */
   public List<String> queuedIds() {
     List<Request> sorted = new ArrayList<>(queue);

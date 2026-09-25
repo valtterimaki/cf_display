@@ -43,10 +43,15 @@ void setup() {
 }
 
 void draw() {
+  debugBeginFrame();
+
   hardware.update(now());
   handleActions();
   triggers.update(now());
   scheduler.update(now());
+
+  debugEndFrame();
+  if (debugVisible) drawDebugOverlay();
 }
 
 /** Current time in seconds. The one place the sketch reads the clock. */

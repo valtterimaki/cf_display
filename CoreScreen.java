@@ -77,6 +77,11 @@ public abstract class CoreScreen {
     return phase;
   }
 
+  /** Seconds since the current phase started. */
+  public float phaseTime() {
+    return tl.t();
+  }
+
   // --- used by the scheduler ---
 
   /** Show the screen from the beginning. */
