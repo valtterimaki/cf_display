@@ -72,6 +72,7 @@ DataSource createWeatherSource(String type) {
 }
 
 DataSource createCalendarSource(String type) {
+  if (type.equals("ics")) return new DataCalendarIcs(store, config.getArray("calendars"));
   if (!type.equals("fake")) println("[data] WARNING: unknown calendar source '" + type + "', using fake");
   return new DataCalendarFake(store);
 }

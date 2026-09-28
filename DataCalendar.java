@@ -9,14 +9,18 @@ import java.util.List;
 public class DataCalendar {
 
   public static class Event {
+    public final String calendar;       // which calendar it came from, e.g. "Work"
     public final String title;
-    public final LocalDateTime start;
+    public final LocalDateTime start;   // local time on this machine
     public final LocalDateTime end;
+    public final boolean allDay;        // start and end are then midnights
 
-    public Event(String title, LocalDateTime start, LocalDateTime end) {
+    public Event(String calendar, String title, LocalDateTime start, LocalDateTime end, boolean allDay) {
+      this.calendar = calendar;
       this.title = title;
       this.start = start;
       this.end = end;
+      this.allDay = allDay;
     }
 
     /** Identifies the event, e.g. to avoid announcing it twice. */

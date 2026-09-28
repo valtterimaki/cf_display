@@ -40,13 +40,15 @@ When verifying changes: build, then run for a while and read the console log
 - `.java` files: data, APIs, hardware, scheduling, timing, config. They never draw.
   They are plain Java (not preprocessed): `1.0f` float literals, explicit imports, `public`.
 - The repo root is the sketch folder. Processing only compiles top-level files, so there
-  are **no code subfolders** — grouping is by file name prefix:
+  are **no code subfolders** — grouping is by file name prefix. The one exception is
+  `code/`: Processing's folder for library jars (ical4j + its dependencies). When adding
+  a jar, add its dependencies too (check the library's Maven `pom`) and say why in the docs.
 
 | Prefix | Kind | Examples |
 |---|---|---|
 | `Core*.java` | engine | `CoreScreen`, `CoreScheduler`, `CoreTimeline`, `CoreEase`, `CoreConfig`, `CoreTriggers`, `CoreTransition` |
 | `Hw*.java` | hardware | `HwAction`, `HwDevice`, `HwSimulated`, `HwPi` |
-| `Data*.java` | data | `DataStore`, `DataSource`, `DataWeather`, `DataWeatherFake` |
+| `Data*.java` | data | `DataStore`, `DataSource`, `DataWeather`, `DataWeatherFake`, `DataCalendarIcs` |
 | `screen_*.pde` | one screen per file | `screen_clock.pde` → `class ScreenClock` |
 | `transition_*.pde` | between-screen animations | `transition_basic.pde` |
 | `ui_*.pde` | shared drawing/formatting helpers, assets | `ui_helpers.pde`, `ui_assets.pde` |
@@ -94,6 +96,12 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 - `fetch()` runs on a background thread; put an immutable result in `DataStore`.
   Throwing is fine — the error is recorded and old data kept.
 - Never do network or file I/O on the draw thread.
+- Calendar: `DataCalendarIcs` reads every link in `config.json` `calendars` (Outlook
+  published ICS, Google secret iCal address), expands recurring events with ical4j,
+  converts times to the machine's local time, and merges the feeds (same title + start
+  = one event). A failing feed keeps its last events. Never log or display a feed URL —
+  it's a secret. To test without real links, parse a local `.ics` file with the static
+  `DataCalendarIcs.parseEvents()`, or serve test files with `python3 -m http.server`.
 
 ### Hardware
 
@@ -132,10 +140,15 @@ the Pi has no OS installed. Still needed for the Pi:
 - [ ] Autostart: console auto-login → `~/.bash_profile` runs `startx` on tty1 → `~/.xinitrc` runs `scripts/run-pi.sh`
 - [ ] `run-pi.sh`: disable screen blanking (`xset s off -dpms`), hide the mouse cursor, maybe restart the sketch if it crashes
 - [ ] Update flow over SSH: `git pull` + restart sketch (script or reboot)
-- [ ] Pi `data/config.json`: `"hardware": "pi"`, `"fullscreen": true`, `"debug": false`
+- [ ] Pi `data/config.json`: `"hardware": "pi"`, `"fullscreen": true`, `"debug": false`, calendar links
+- [ ] Set the Pi's time zone (`raspi-config` → Localisation): calendar times are shown in the machine's local time
+- [ ] Check how long the first calendar parse takes on the 3B (about 0.6 s on the Mac)
 - [ ] Measure FPS with the debug view; later test the CRT shader's performance on the 3B
 - [ ] Choose GPIO library (Pi4J / processing.io / other) and implement `HwPi` (buttons, encoder, LEDs, light sensor via ADC or I²C)
 
-Other open items: verify the Mac run (step 0), calendar access route (Graph vs ICS — company
-account, ask IT), sleep mode, CRT shader design, scheduler rules beyond cycling,
-button → action mapping.
+Other open items: verify the Mac run (step 0), sleep mode, CRT shader design, scheduler
+rules beyond cycling, button → action mapping.
+
+Calendar access is decided: published ICS links (`DataCalendarIcs`). Microsoft Graph is
+only needed if a future account doesn't allow publishing; it would be another
+`DataCalendar<Provider>` source.

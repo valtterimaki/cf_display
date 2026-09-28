@@ -5,5 +5,9 @@
   "sources": {
     "weather": "fake",
     "calendar": "fake"
-  }
+  },
+  "calendars": [
+    { "name": "Work",   "url": "https://outlook.office365.com/owa/calendar/PASTE-YOUR-ICS-LINK/calendar.ics" },
+    { "name": "Google", "url": "https://calendar.google.com/calendar/ical/PASTE-YOUR-SECRET-ADDRESS/basic.ics" }
+  ]
 }

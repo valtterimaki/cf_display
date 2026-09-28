@@ -99,6 +99,9 @@ cf_display/                      ← repo root = Processing sketch
 ├── DataWeatherFake.java         ← fake weather source
 ├── DataCalendar.java            ← calendar data model
 ├── DataCalendarFake.java        ← fake calendar source
+├── DataCalendarIcs.java         ← real calendar: published ICS links (Outlook, Google)
+│
+├── code/                        ← library jars: ical4j + its dependencies
 │
 └── data/
     ├── config.example.json      ← committed template
@@ -181,8 +184,15 @@ Building blocks, not effects. All in seconds (float). Time comes from the sketch
   only decide (e.g. "event in 5 min" → `request("calendar", HIGH)`). A rule keeps
   working when a fake source is swapped for a real one.
 - Skeleton: only `*Fake` sources, generating plausible changing data.
-  Real sources (`DataWeatherOpenMeteo`, `DataCalendarGraph` / ICS, Slack, Harvest…)
+  Real sources (`DataWeatherOpenMeteo`, `DataCalendarIcs`, Slack, Harvest…)
   are added later as new files next to the fakes; config picks which one runs.
+- Calendar (decided 2026-09-28): published **ICS links** instead of Microsoft Graph.
+  Both Microsoft accounts allow "Publish a calendar" with full details, so no app
+  registration, admin consent or sign-in on the Pi is needed. Google uses its secret
+  iCal address the same way. `sources.calendar: "ics"` reads the `calendars` list in
+  config and merges all feeds into one `DataCalendar`. Parsing uses the ical4j
+  library (jars in `code/`), because recurring meetings (exceptions, moved single
+  occurrences, Windows time zone names in Outlook feeds) are too easy to get wrong by hand.
 
 ### 2.8 Config (`CoreConfig`)
 
@@ -306,9 +316,8 @@ Each step ends in something runnable. Work on desktop first; Pi at step 8.
 ## 5. Open questions (not blocking the skeleton)
 
 - **Display:** HDMI or DSI? Affects Pi config in step 8.
-- **Calendar:** company Microsoft account — Graph app registration allowed, or
-  Outlook ICS publishing? (Check: Outlook web → Settings → Calendar → Shared
-  calendars → Publish a calendar.)
+- ~~**Calendar:** Graph or ICS?~~ Decided: ICS links (see 2.7). Client accounts
+  that don't allow publishing would need their own solution (Graph, or busy-only ICS).
 - **GPIO library** for `HwPi`.
 - **Analog light sensors:** ADC or I²C sensor (user will decide).
 - **Sleep mode** behaviour and whether the display backlight can be controlled.

@@ -30,6 +30,6 @@ public class DataCalendarFake extends DataSource {
   }
 
   private void addEvent(String title, LocalDateTime startTime, int minutes) {
-    events.add(new DataCalendar.Event(title, startTime, startTime.plusMinutes(minutes)));
+    events.add(new DataCalendar.Event("Fake", title, startTime, startTime.plusMinutes(minutes), false));
   }
 }

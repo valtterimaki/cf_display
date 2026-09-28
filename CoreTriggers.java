@@ -42,6 +42,7 @@ public class CoreTriggers {
 
     LocalDateTime now = LocalDateTime.now();
     for (DataCalendar.Event event : calendar.events) {
+      if (event.allDay) continue;   // starts at midnight, nothing to get ready for
       long secondsUntil = Duration.between(now, event.start).getSeconds();
       boolean soon = secondsUntil > 0 && secondsUntil <= CALENDAR_LEAD_MINUTES * 60;
       if (soon && announcedEvents.add(event.key())) {

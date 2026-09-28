@@ -90,10 +90,11 @@ class ScreenCalendar extends CoreScreen {
     fill(240);
     textFont(fontBody);
     textAlign(LEFT, CENTER);
-    text(fmtTime(event.start) + "   " + event.title, 104 + offsetX, y + h / 2);
+    String time = event.allDay ? "All day" : fmtTime(event.start);
+    text(time + "   " + event.title, 104 + offsetX, y + h / 2);
     textAlign(RIGHT, CENTER);
     fill(200);
     textFont(fontSmall);
-    text(fmtTimeUntil(event.start), 616 + offsetX, y + h / 2);
+    if (!event.allDay) text(fmtTimeUntil(event.start), 616 + offsetX, y + h / 2);
   }
 }

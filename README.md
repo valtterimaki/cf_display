@@ -46,9 +46,24 @@ Use `--build` instead of `--run` to only check that it compiles.
 | `fullscreen` | `true` / `false` | Fullscreen, or a 720×720 window |
 | `debug` | `true` / `false` | Debug view visible at startup |
 | `sources.weather` | `"fake"` | Where weather data comes from |
-| `sources.calendar` | `"fake"` | Where calendar data comes from |
+| `sources.calendar` | `"fake"` / `"ics"` | Where calendar data comes from. `"ics"` reads the `calendars` links |
+| `calendars` | list of `{ "name": …, "url": … }` | Published calendar links, merged into one calendar. `name` is shown on screen |
 
 API keys and tokens will go here too — never commit this file.
+
+### Calendar links
+
+Each calendar has a secret ICS link. Anyone who has the link can read that
+calendar, so it only goes in `config.json`.
+
+- **Outlook / Microsoft 365:** Outlook on the web → Settings → Calendar → Shared
+  calendars → *Publish a calendar* → pick the calendar and "Can view all details" →
+  Publish → copy the **ICS** link (not the HTML one).
+- **Google:** Google Calendar settings → the calendar → *Integrate calendar* →
+  **Secret address in iCal format**.
+
+The display shows events in the computer's own time zone, so set that correctly
+(on the Pi too).
 
 ## How the code is organised
 
@@ -64,6 +79,7 @@ grouped by name:
 - `Core*.java` — engine: screen lifecycle, scheduler, timing, easing, config, triggers
 - `Hw*.java` — hardware: actions, simulated and Pi implementations
 - `Data*.java` — data: store, sources, data models
+- `code/` — library jars (Processing's folder for them): ical4j for calendar feeds, plus what it needs
 
 Each screen goes through **intro → main → outro**, and decides itself when each
 phase ends. A scheduler picks what to show next: queued requests first (from

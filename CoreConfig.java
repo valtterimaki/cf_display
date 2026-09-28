@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.Reader;
 
+import processing.data.JSONArray;
 import processing.data.JSONObject;
 
 /**
@@ -60,6 +61,14 @@ public class CoreConfig {
     String name = lastPart(key);
     if (parent == null || !parent.hasKey(name)) return fallback;
     return parent.getFloat(name, fallback);
+  }
+
+  /** A list, e.g. "calendars". Empty if it's missing. */
+  public JSONArray getArray(String key) {
+    JSONObject parent = parentOf(key);
+    String name = lastPart(key);
+    if (parent == null || !parent.hasKey(name)) return new JSONArray();
+    return parent.getJSONArray(name);
   }
 
   // --- helpers ---
