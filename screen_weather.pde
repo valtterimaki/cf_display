@@ -52,9 +52,9 @@ class ScreenWeather extends CoreScreen {
 
     fill(240, alpha);
     textAlign(CENTER, CENTER);
-    textSize(64);
+    textFont(fontLarge);
     text(temperature, width / 2, 500);
-    textSize(22);
+    textFont(fontBody);
     text(details, width / 2, 570);
   }
 }

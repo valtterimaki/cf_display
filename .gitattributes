@@ -1,3 +1,9 @@
 # Store and check out text files with LF line endings on every machine.
 # Shell scripts run on the Pi break with Windows (CRLF) line endings.
 * text=auto eol=lf
+
+# Binary assets: never convert line endings (text=auto should detect these, but be explicit).
+*.ttf binary
+*.otf binary
+*.png binary
+*.jpg binary

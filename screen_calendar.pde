@@ -66,14 +66,14 @@ class ScreenCalendar extends CoreScreen {
   void drawTitle(float alpha) {
     fill(240, alpha);
     textAlign(LEFT, CENTER);
-    textSize(40);
+    textFont(fontTitle);
     text("CALENDAR", 80, 120);
   }
 
   void drawEmpty() {
     fill(160);
     textAlign(LEFT, CENTER);
-    textSize(24);
+    textFont(fontBody);
     text("No upcoming events", 80, TOP + 35);
   }
 
@@ -88,12 +88,12 @@ class ScreenCalendar extends CoreScreen {
     rect(80 + offsetX, y, 560, h, 8);
 
     fill(240);
-    textSize(24);
+    textFont(fontBody);
     textAlign(LEFT, CENTER);
     text(fmtTime(event.start) + "   " + event.title, 104 + offsetX, y + h / 2);
     textAlign(RIGHT, CENTER);
     fill(200);
-    textSize(18);
+    textFont(fontSmall);
     text(fmtTimeUntil(event.start), 616 + offsetX, y + h / 2);
   }
 }

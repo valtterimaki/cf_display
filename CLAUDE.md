@@ -49,7 +49,7 @@ When verifying changes: build, then run for a while and read the console log
 | `Data*.java` | data | `DataStore`, `DataSource`, `DataWeather`, `DataWeatherFake` |
 | `screen_*.pde` | one screen per file | `screen_clock.pde` → `class ScreenClock` |
 | `transition_*.pde` | between-screen animations | `transition_basic.pde` |
-| `ui_*.pde` | shared drawing/formatting helpers | `ui_helpers.pde` |
+| `ui_*.pde` | shared drawing/formatting helpers, assets | `ui_helpers.pde`, `ui_assets.pde` |
 | `debug_*.pde` | debug view | `debug_overlay.pde` |
 
 `cf_display.pde` is only wiring: settings/setup/draw, registering screens, creating
@@ -104,12 +104,16 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 ## Conventions
 
 - Time: seconds as `float`, from `now()` in `cf_display.pde` (the only clock read).
+- Assets: fonts (later images, shaders) are loaded once in `loadAssets()` in `ui_assets.pde`,
+  never on first use inside a screen (a first font lookup by name froze the Mac for 2+ s).
+  One `PFont` per size; screens call `textFont(fontBody)` etc., not `textSize()`.
+  Font files live in `data/`.
 - Displayed numbers/times: use `ui_helpers.pde` (`fmtDecimal`, `fmtTemperature`,
   `fmtTime`, `fmtTimeUntil`) — locale-independent, so PC (Finnish locale), Mac and Pi match.
 - Anything drawn on top of screens: wrap in `pushStyle()`/`popStyle()`.
 - P2D gotcha: an `arc()` with zero size or zero sweep prints a tessellation error — skip it.
 - Logging: `System.out.println("[tag] message")` with tags like `[screen]`, `[scheduler]`,
-  `[data]`, `[trigger]`, `[hw]`, `[input]`, `[config]`.
+  `[data]`, `[trigger]`, `[hw]`, `[input]`, `[config]`, `[assets]`.
 - Secrets and per-machine settings: `data/config.json` (git-ignored). Template with
   every key: `data/config.example.json` — keep it updated when adding keys.
 - Git: LF line endings (`.gitattributes`). One commit per finished step. Push only

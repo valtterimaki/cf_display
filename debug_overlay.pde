@@ -12,7 +12,6 @@ final int DEBUG_HISTORY = 120;                        // frames of draw-time his
 float[] debugDrawTimes = new float[DEBUG_HISTORY];    // ms per frame
 int debugHistoryIndex = 0;
 long debugFrameStartNanos = 0;
-PFont debugFont;
 
 void debugBeginFrame() {
   debugFrameStartNanos = System.nanoTime();
@@ -25,10 +24,8 @@ void debugEndFrame() {
 }
 
 void drawDebugOverlay() {
-  if (debugFont == null) debugFont = createFont("Monospaced", 14);
-
   pushStyle();   // don't leak font/colours/modes into the screens
-  textFont(debugFont);
+  textFont(fontDebug);   // loaded in ui_assets.pde
   textAlign(LEFT, TOP);
   rectMode(CORNER);
 

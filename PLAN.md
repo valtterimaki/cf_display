@@ -29,6 +29,7 @@ placeholder screens, and Pi boot setup. No real APIs, no CRT shader yet.
 | Data | Behind interfaces; **fake** sources in skeleton, real API sources added later |
 | Screens | Fresh by default, optional kept state |
 | Triggers | Queued, not immediate |
+| Assets | Fonts (later images, shaders) preloaded in `setup()`, fonts from files in `data/` |
 
 ---
 
@@ -73,8 +74,10 @@ cf_display/                      ← repo root = Processing sketch
 ├── screen_clock.pde             ← placeholder screen
 ├── screen_weather.pde           ← placeholder screen (uses fake weather data)
 ├── screen_calendar.pde          ← placeholder screen (uses fake calendar data)
+├── screen_example.pde           ← learning example: phases, timeline, eases
 ├── transition_basic.pde         ← placeholder between-screen animation
 ├── ui_helpers.pde               ← shared drawing helpers (text styles, etc.)
+├── ui_assets.pde                ← fonts etc., all loaded once at startup
 ├── debug_overlay.pde            ← debug view
 │
 ├── CoreScreen.java              ← abstract base class for all screens (lifecycle)
@@ -99,6 +102,7 @@ cf_display/                      ← repo root = Processing sketch
 │
 └── data/
     ├── config.example.json      ← committed template
+    ├── ProcessingSansPro-*.ttf  ← font (+ its license file)
     └── config.json              ← git-ignored, per machine
 ```
 
@@ -206,6 +210,14 @@ hardware state (simulated LEDs, light level, encoder), data source statuses.
 
 Screens draw straight to the main canvas. A post-processing shader can later be
 applied at the end of `draw()` (e.g. `filter(crtShader)`) without changing screens.
+
+### 2.11 Assets (`ui_assets.pde`)
+
+Anything loaded on first use freezes the sketch for a moment, and because the timeline
+runs on real time, a freeze during an animation makes it skip (on the Mac the first
+font lookup by name took 2+ s). So `setup()` starts the data sources, then
+`loadAssets()` loads every font (one per size, from files in `data/`) before the
+scheduler starts the first screen.
 
 ---
 

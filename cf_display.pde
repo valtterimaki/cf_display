@@ -29,9 +29,13 @@ void setup() {
   store.addSource(createWeatherSource(config.getString("sources.weather", "fake")));
   store.addSource(createCalendarSource(config.getString("sources.calendar", "fake")));
 
+  // After starting the sources, so their first fetch runs while fonts load
+  loadAssets();
+
   scheduler = new CoreScheduler();
 
   // Screens — registration order is the fallback cycle order
+  scheduler.register("example",  () -> new ScreenExample());   // learning example (see screen_example.pde)
   scheduler.register("clock",    () -> new ScreenClock());
   scheduler.register("weather",  () -> new ScreenWeather());
   scheduler.register("calendar", () -> new ScreenCalendar());
