@@ -52,7 +52,9 @@ import processing.data.JSONObject;
 public class DataCalendarIcs extends DataSource {
 
   private static final int DAYS_AHEAD = 7;
-  private static final Duration TIMEOUT = Duration.ofSeconds(20);
+  // Outlook usually answers in ~3 s, but the first request after a quiet period
+  // took 18 s (it rebuilds the feed). Downloads run in the background, so be generous.
+  private static final Duration TIMEOUT = Duration.ofSeconds(60);
 
   static {
     // ical4j settings. They must be set before ical4j is used for the first time.
