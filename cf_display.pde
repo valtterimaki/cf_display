@@ -7,6 +7,9 @@ CoreTriggers triggers;
 HwDevice hardware;
 DataStore store;
 
+// Draws per second. 50 to match the videos (After Effects renders at 50 fps).
+final int FRAME_RATE = 50;
+
 boolean debugVisible;
 
 void settings() {
@@ -20,7 +23,7 @@ void settings() {
 }
 
 void setup() {
-  frameRate(60);
+  frameRate(FRAME_RATE);
 
   debugVisible = config.getBoolean("debug", false);
   hardware = createHardware(config.getString("hardware", "simulated"));
@@ -39,6 +42,7 @@ void setup() {
   scheduler.register("clock",    () -> new ScreenClock());
   scheduler.register("weather",  () -> new ScreenWeather());
   scheduler.register("calendar", () -> new ScreenCalendar());
+  scheduler.register("rooster",  () -> new ScreenRooster());
 
   scheduler.setTransition(new TransitionBasic());
   scheduler.start(now());

@@ -16,7 +16,7 @@ import processing.core.PImage;
 
 /**
  * A video stored as numbered image files (a frame sequence), for example
- * data/video/intro/0001.jpg, 0002.jpg, ... (JPG or PNG, PNG for transparency).
+ * data/video/rooster/rooster_00000.png, rooster_00001.png, ... (PNG or JPG).
  *
  * Screens draw it like any image, at any size and with any effect:
  *
@@ -44,15 +44,12 @@ public class CoreVideo {
   // (about 16 MB for 720×720). Free them while a video isn't shown if memory runs low.
   private static final int BUFFER_FRAMES = 6;
 
-  // Moves video frame changes halfway between two draws (at 60 fps). Without it, a
-  // 30 fps video changes frame exactly on draw frames, and a millisecond of timing
-  // jitter shows some frames once and others three times.
-  private static final float HALF_DRAW_FRAME = 0.5f / 60;
 
   private final String name;
   private final File[] files;
   private final float fps;
   private final boolean loop;
+  private final float halfDrawFrame;
   private final int width;
   private final int height;
 
@@ -72,17 +69,24 @@ public class CoreVideo {
   private volatile float decodeMillis = 0;   // average time to decode one frame
   private int lateFrames = 0;                // draws where the wanted frame wasn't ready
 
-  /** Reads the frame list and size, and starts decoding the first frames. */
-  public CoreVideo(File folder, float fps, boolean loop) {
+  /**
+   * Reads the frame list and size, and starts decoding the first frames.
+   * drawFps is the sketch's frame rate.
+   */
+  public CoreVideo(File folder, float fps, boolean loop, float drawFps) {
     this.name = folder.getName();
     this.fps = fps;
     this.loop = loop;
+    // Moves video frame changes halfway between two draws. Without it, a 25 fps video
+    // at 50 fps drawing changes frame exactly on draw frames, and a millisecond of
+    // timing jitter shows some frames once and others three times.
+    this.halfDrawFrame = 0.5f / drawFps;
 
     File[] found = folder.listFiles((dir, file) -> file.toLowerCase().matches(".*\\.(png|jpe?g)"));
     if (found == null || found.length == 0) {
       throw new IllegalArgumentException("No .png/.jpg frames in " + folder.getPath());
     }
-    Arrays.sort(found);   // by file name, so number the frames with leading zeros
+    Arrays.sort(found);   // by file name: the zero-padded frame numbers keep them in order
     files = found;
 
     BufferedImage first = readImage(files[0]);
@@ -158,7 +162,7 @@ public class CoreVideo {
   // --- internals ---
 
   private int indexAt(float seconds) {
-    int index = (int) Math.floor((seconds + HALF_DRAW_FRAME) * fps);
+    int index = (int) Math.floor((seconds + halfDrawFrame) * fps);
     if (index < 0) return 0;
     if (loop) return index % files.length;
     return Math.min(index, files.length - 1);

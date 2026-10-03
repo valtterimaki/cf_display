@@ -105,15 +105,17 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 
 ### Video
 
-- Videos are frame sequences (numbered `.jpg`, `.png` when transparency is needed) in
-  `data/video/<name>/`, played by `CoreVideo`. Not the Processing video library
-  (GStreamer): it was unreliable on the Pi in an earlier project.
+- Videos are frame sequences in `data/video/<name>/`, files named
+  `<name>_<5-digit frame number>` (`rooster_00000.png`, from After Effects) —
+  `.jpg` for footage, `.png` for transparency or flat graphics. Played by `CoreVideo`,
+  not the Processing video library (GStreamer): it was unreliable on the Pi in an
+  earlier project.
 - Load in `loadAssets()` with `loadVideo(name, fps, loop)`; screens draw
   `image(video.frame(seconds), x, y, w, h)` — any size, tint or shader.
 - A background thread decodes a few frames ahead into reused arrays. Debug view shows
   per video: average decode time vs. budget (1000 / fps ms) and late frames.
-- Frame export: `ffmpeg -i in.mov -vf scale=720:720 -q:v 3 data/video/<name>/%04d.jpg`
-  (PNG with alpha: `-pix_fmt rgba .../%04d.png`).
+- Frame export: `ffmpeg -i in.mov -vf scale=720:720 -q:v 3 data/video/<name>/<name>_%05d.jpg`
+  (PNG with alpha: `-pix_fmt rgba .../<name>_%05d.png`).
 
 ### Hardware
 
@@ -124,6 +126,8 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 ## Conventions
 
 - Time: seconds as `float`, from `now()` in `cf_display.pde` (the only clock read).
+- Frame rate: `FRAME_RATE` (50) in `cf_display.pde`, same as the After Effects renders.
+  The display must refresh at 50 Hz too: 50 fps on a 60 Hz screen can't be even.
 - Assets: fonts (later images, shaders) are loaded once in `loadAssets()` in `ui_assets.pde`,
   never on first use inside a screen (a first font lookup by name froze the Mac for 2+ s).
   One `PFont` per size; screens call `textFont(fontBody)` etc., not `textSize()`.
@@ -155,6 +159,7 @@ the Pi has no OS installed. Still needed for the Pi:
 - [ ] Pi `data/config.json`: `"hardware": "pi"`, `"fullscreen": true`, `"debug": false`, calendar links
 - [ ] Set the Pi's time zone (`raspi-config` → Localisation): calendar times are shown in the machine's local time
 - [ ] Check how long the first calendar parse takes on the 3B (about 0.6 s on the Mac)
+- [ ] Run the display at 50 Hz (matches `FRAME_RATE`); on a 60 Hz mode motion is uneven
 - [ ] Measure video decode time on the 3B (debug view; ~10 ms per 720×720 frame on the Mac, budget 33 ms at 30 fps). Too slow → smaller frames drawn scaled up, or more decode threads
 - [ ] Measure FPS with the debug view; later test the CRT shader's performance on the 3B
 - [ ] Choose GPIO library (Pi4J / processing.io / other) and implement `HwPi` (buttons, encoder, LEDs, light sensor via ADC or I²C)

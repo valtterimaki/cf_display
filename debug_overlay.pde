@@ -144,10 +144,11 @@ void drawDebugLeds(float x, float y) {
   noStroke();
 }
 
-/** Draw time per frame. The line marks 16.7 ms (the 60 fps budget). */
+/** Draw time per frame. The line marks the time one frame may take (20 ms at 50 fps). */
 void drawDebugGraph(float x, float y, float w, float h) {
-  float maxMs = 33.3;
-  float budgetY = y + h - h * (16.7 / maxMs);
+  float budgetMs = 1000.0 / FRAME_RATE;
+  float maxMs = 2 * budgetMs;
+  float budgetY = y + h - h * (budgetMs / maxMs);
 
   stroke(255, 255, 255, 60);
   strokeWeight(1);
@@ -159,7 +160,7 @@ void drawDebugGraph(float x, float y, float w, float h) {
     // oldest on the left
     float ms = debugDrawTimes[(debugHistoryIndex + i) % DEBUG_HISTORY];
     float barHeight = min(h, h * ms / maxMs);
-    fill(ms > 16.7 ? color(255, 120, 100) : color(120, 255, 140));
+    fill(ms > budgetMs ? color(255, 120, 100) : color(120, 255, 140));
     rect(x + i * barWidth, y + h - barHeight, max(1, barWidth - 1), barHeight);
   }
 }

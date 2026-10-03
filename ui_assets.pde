@@ -19,6 +19,8 @@ PFont fontBody;    // 24 px — normal text
 PFont fontSmall;   // 18 px — secondary text
 PFont fontDebug;   // 14 px — debug overlay (monospaced)
 
+CoreVideo videoRooster;   // 538×130 logo animation, plays once
+
 void loadAssets() {
   int startMillis = millis();
 
@@ -33,20 +35,20 @@ void loadAssets() {
   // only makes startup a couple of seconds longer.
   fontDebug = createFont("Monospaced", 14);
 
+  videoRooster = loadVideo("rooster", 50, false);
+
   println("[assets] loaded in " + (millis() - startMillis) + " ms");
 }
 
-// Videos are frame sequences: numbered .jpg files (.png for transparency) in
-// data/video/<folder>/. Load them in loadAssets() like the fonts:
-//   CoreVideo videoIntro;                          // global, next to the fonts
-//   videoIntro = loadVideo("intro", 30, false);    // in loadAssets()
-// See CoreVideo.java for how screens play them.
+// Videos are frame sequences in data/video/<folder>/, named <name>_<5-digit frame>,
+// e.g. rooster_00000.png (.jpg, or .png for transparency/flat graphics).
+// Load them in loadAssets() like the fonts. See CoreVideo.java for how screens play them.
 
 // Every loaded video, so the debug view can show whether decoding keeps up.
 ArrayList<CoreVideo> videos = new ArrayList<CoreVideo>();
 
 CoreVideo loadVideo(String folder, float fps, boolean loop) {
-  CoreVideo video = new CoreVideo(new File(dataPath("video/" + folder)), fps, loop);
+  CoreVideo video = new CoreVideo(new File(dataPath("video/" + folder)), fps, loop, FRAME_RATE);
   videos.add(video);
   return video;
 }
