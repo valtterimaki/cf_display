@@ -40,7 +40,7 @@ void drawDebugOverlay() {
     debugQueueLine(),
     debugHardwareLine(),
   };
-  String[] sourceLines = debugSourceLines();
+  String[] sourceLines = concat(debugSourceLines(), debugVideoLines());
 
   int lineCount = lines.length + sourceLines.length;
   float panelHeight = lineCount * lineHeight + 16 + 40;   // + graph
@@ -113,6 +113,19 @@ String[] debugSourceLines() {
     if (age >= 0) line += "  " + round(age) + " s ago";
     if (s.lastError() != null) line += "  (" + s.lastError() + ")";
     lines[i] = line;
+  }
+  return lines;
+}
+
+/** Decoding keeps up while its time stays under the budget (time per video frame). */
+String[] debugVideoLines() {
+  String[] lines = new String[videos.size()];
+  for (int i = 0; i < videos.size(); i++) {
+    CoreVideo v = videos.get(i);
+    lines[i] = "VIDEO  " + v.name()
+      + "  decode " + fmtDecimal(v.decodeMillis(), 1) + " ms"
+      + " (budget " + fmtDecimal(1000 / v.fps(), 1) + ")"
+      + "  late " + v.lateFrames();
   }
   return lines;
 }

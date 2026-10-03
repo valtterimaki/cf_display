@@ -46,7 +46,7 @@ When verifying changes: build, then run for a while and read the console log
 
 | Prefix | Kind | Examples |
 |---|---|---|
-| `Core*.java` | engine | `CoreScreen`, `CoreScheduler`, `CoreTimeline`, `CoreEase`, `CoreConfig`, `CoreTriggers`, `CoreTransition` |
+| `Core*.java` | engine | `CoreScreen`, `CoreScheduler`, `CoreTimeline`, `CoreEase`, `CoreConfig`, `CoreTriggers`, `CoreTransition`, `CoreVideo` |
 | `Hw*.java` | hardware | `HwAction`, `HwDevice`, `HwSimulated`, `HwPi` |
 | `Data*.java` | data | `DataStore`, `DataSource`, `DataWeather`, `DataWeatherFake`, `DataCalendarIcs` |
 | `screen_*.pde` | one screen per file | `screen_clock.pde` → `class ScreenClock` |
@@ -103,6 +103,18 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
   it's a secret. To test without real links, parse a local `.ics` file with the static
   `DataCalendarIcs.parseEvents()`, or serve test files with `python3 -m http.server`.
 
+### Video
+
+- Videos are frame sequences (numbered `.jpg`, `.png` when transparency is needed) in
+  `data/video/<name>/`, played by `CoreVideo`. Not the Processing video library
+  (GStreamer): it was unreliable on the Pi in an earlier project.
+- Load in `loadAssets()` with `loadVideo(name, fps, loop)`; screens draw
+  `image(video.frame(seconds), x, y, w, h)` — any size, tint or shader.
+- A background thread decodes a few frames ahead into reused arrays. Debug view shows
+  per video: average decode time vs. budget (1000 / fps ms) and late frames.
+- Frame export: `ffmpeg -i in.mov -vf scale=720:720 -q:v 3 data/video/<name>/%04d.jpg`
+  (PNG with alpha: `-pix_fmt rgba .../%04d.png`).
+
 ### Hardware
 
 - Code reacts to `HwAction`s, never to raw keys/pins. Add new actions to `HwAction`.
@@ -143,6 +155,7 @@ the Pi has no OS installed. Still needed for the Pi:
 - [ ] Pi `data/config.json`: `"hardware": "pi"`, `"fullscreen": true`, `"debug": false`, calendar links
 - [ ] Set the Pi's time zone (`raspi-config` → Localisation): calendar times are shown in the machine's local time
 - [ ] Check how long the first calendar parse takes on the 3B (about 0.6 s on the Mac)
+- [ ] Measure video decode time on the 3B (debug view; ~10 ms per 720×720 frame on the Mac, budget 33 ms at 30 fps). Too slow → smaller frames drawn scaled up, or more decode threads
 - [ ] Measure FPS with the debug view; later test the CRT shader's performance on the 3B
 - [ ] Choose GPIO library (Pi4J / processing.io / other) and implement `HwPi` (buttons, encoder, LEDs, light sensor via ADC or I²C)
 

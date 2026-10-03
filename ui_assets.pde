@@ -35,3 +35,18 @@ void loadAssets() {
 
   println("[assets] loaded in " + (millis() - startMillis) + " ms");
 }
+
+// Videos are frame sequences: numbered .jpg files (.png for transparency) in
+// data/video/<folder>/. Load them in loadAssets() like the fonts:
+//   CoreVideo videoIntro;                          // global, next to the fonts
+//   videoIntro = loadVideo("intro", 30, false);    // in loadAssets()
+// See CoreVideo.java for how screens play them.
+
+// Every loaded video, so the debug view can show whether decoding keeps up.
+ArrayList<CoreVideo> videos = new ArrayList<CoreVideo>();
+
+CoreVideo loadVideo(String folder, float fps, boolean loop) {
+  CoreVideo video = new CoreVideo(new File(dataPath("video/" + folder)), fps, loop);
+  videos.add(video);
+  return video;
+}
