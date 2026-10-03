@@ -126,8 +126,9 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 ## Conventions
 
 - Time: seconds as `float`, from `now()` in `cf_display.pde` (the only clock read).
-- Frame rate: `FRAME_RATE` (50) in `cf_display.pde`, same as the After Effects renders.
-  The display must refresh at 50 Hz too: 50 fps on a 60 Hz screen can't be even.
+- Frame rate: `FRAME_RATE` in `cf_display.pde` is the only place to change it (the video
+  timing and the debug graph follow it). Keep the display's refresh rate the same, e.g.
+  50 fps on a 60 Hz screen can't be even. A video's own fps (`loadVideo`) is its render rate.
 - Assets: fonts (later images, shaders) are loaded once in `loadAssets()` in `ui_assets.pde`,
   never on first use inside a screen (a first font lookup by name froze the Mac for 2+ s).
   One `PFont` per size; screens call `textFont(fontBody)` etc., not `textSize()`.
@@ -159,7 +160,7 @@ the Pi has no OS installed. Still needed for the Pi:
 - [ ] Pi `data/config.json`: `"hardware": "pi"`, `"fullscreen": true`, `"debug": false`, calendar links
 - [ ] Set the Pi's time zone (`raspi-config` → Localisation): calendar times are shown in the machine's local time
 - [ ] Check how long the first calendar parse takes on the 3B (about 0.6 s on the Mac)
-- [ ] Run the display at 50 Hz (matches `FRAME_RATE`); on a 60 Hz mode motion is uneven
+- [ ] Run the display at the same refresh rate as `FRAME_RATE`, otherwise motion is uneven
 - [ ] Measure video decode time on the 3B (debug view; ~10 ms per 720×720 frame on the Mac, budget 33 ms at 30 fps). Too slow → smaller frames drawn scaled up, or more decode threads
 - [ ] Measure FPS with the debug view; later test the CRT shader's performance on the 3B
 - [ ] Choose GPIO library (Pi4J / processing.io / other) and implement `HwPi` (buttons, encoder, LEDs, light sensor via ADC or I²C)
