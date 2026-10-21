@@ -13,14 +13,21 @@ float[] debugDrawTimes = new float[DEBUG_HISTORY];    // ms per frame
 int debugHistoryIndex = 0;
 long debugFrameStartNanos = 0;
 
+// Time spent in CharBlock.draw() this frame (it adds to this), and a smoothed value to show.
+// The open question is whether the Pi 3B can redraw big character blocks every frame.
+float debugBlockMillis = 0;
+float debugBlockMillisSmoothed = 0;
+
 void debugBeginFrame() {
   debugFrameStartNanos = System.nanoTime();
+  debugBlockMillis = 0;
 }
 
 void debugEndFrame() {
   float ms = (System.nanoTime() - debugFrameStartNanos) / 1e6;
   debugDrawTimes[debugHistoryIndex] = ms;
   debugHistoryIndex = (debugHistoryIndex + 1) % DEBUG_HISTORY;
+  debugBlockMillisSmoothed = lerp(debugBlockMillisSmoothed, debugBlockMillis, 0.1);
 }
 
 void drawDebugOverlay() {
@@ -79,7 +86,8 @@ String debugPerformanceLine() {
   }
   return "FPS " + fmtDecimal(frameRate, 1)
     + "   draw " + fmtDecimal(sum / DEBUG_HISTORY, 1) + " ms"
-    + " (max " + fmtDecimal(max, 1) + ")";
+    + " (max " + fmtDecimal(max, 1) + ")"
+    + "   blocks " + fmtDecimal(debugBlockMillisSmoothed, 1) + " ms";
 }
 
 String debugScreenLine() {

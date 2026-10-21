@@ -19,7 +19,21 @@ PFont fontBody;    // 24 px — normal text
 PFont fontSmall;   // 18 px — secondary text
 PFont fontDebug;   // 14 px — debug overlay (monospaced)
 
+// Character blocks (char_block.pde). A custom Iosevka build with "Term" spacing:
+// every glyph is exactly one cell wide.
+final String CHAR_FONT_FILE = "fonts/IosevkaCustom-SemiExtended.ttf";
+PFont fontChar;    // 24 px — character blocks
+
+// Colors from the Figma designs. Plain color(r, g, b) values work everywhere too.
+final color BACKGROUND = #000000;   // what screens clear to; inverted Cells cut out in this
+final color GREEN      = #5F9A80;
+final color YELLOW     = #D6D26A;
+final color RED        = #D2475E;
+final color WHITE      = #FFFFFF;
+
 CoreVideo videoRooster;   // 538×130 logo animation, plays once
+
+CharAnimation animSpinner;   // 4×4 pulsing square, loops
 
 void loadAssets() {
   int startMillis = millis();
@@ -35,7 +49,13 @@ void loadAssets() {
   // only makes startup a couple of seconds longer.
   fontDebug = createFont("Monospaced", 14);
 
+  // With a charset, every glyph is made now instead of on first use
+  fontChar = createFont(CHAR_FONT_FILE, 24, true, charBlockCharset());
+  println("[assets] char font: " + fontChar.getGlyphCount() + " glyphs, cell "
+    + int(charCellWidth(fontChar)) + " px wide, " + countWideGlyphs(fontChar) + " wider than a cell");
+
   videoRooster = loadVideo("rooster", 50, false);
+  animSpinner = loadCharAnimation("spinner", 4, true);
 
   println("[assets] loaded in " + (millis() - startMillis) + " ms");
 }

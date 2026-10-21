@@ -52,6 +52,7 @@ When verifying changes: build, then run for a while and read the console log
 | `screen_*.pde` | one screen per file | `screen_clock.pde` → `class ScreenClock` |
 | `transition_*.pde` | between-screen animations | `transition_basic.pde` |
 | `ui_*.pde` | shared drawing/formatting helpers, assets | `ui_helpers.pde`, `ui_assets.pde` |
+| `char_*.pde` | character blocks | `char_block.pde` |
 | `debug_*.pde` | debug view | `debug_overlay.pde` |
 
 `cf_display.pde` is only wiring: settings/setup/draw, registering screens, creating
@@ -81,7 +82,8 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 - Register in `cf_display.pde`: `scheduler.register("id", () -> new ScreenX());`
   Registration order = fallback cycle order = number keys in simulation.
 - Animations are hand-crafted per screen. Don't build generic effect systems — only
-  timing building blocks.
+  timing building blocks. One exception: Block effects (see Character blocks) are small
+  reusable classes; the screen still decides when they run and passes their progress.
 
 ### Scheduler and triggers
 
@@ -117,6 +119,30 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 - Frame export: `ffmpeg -i in.mov -vf scale=720:720 -q:v 3 data/video/<name>/<name>_%05d.jpg`
   (PNG with alpha: `-pix_fmt rgba .../<name>_%05d.png`).
 
+### Character blocks
+
+Grids of monospace characters (terms in `GLOSSARY.md`: Block, Cell, Component, Inverted,
+Block effect, Character animation). All in `char_block.pde`; `screen_charblock.pde` is the demo.
+
+- A screen creates a `CharBlock` and its `CharComponent`s in `start()`. Every frame:
+  `block.clear()` → `block.place(component, col, row)` for each → `effect.apply(block, progress)`
+  → `block.draw(x, y)`. Stacking is a loop with a row counter in the screen, no layout engine.
+- Components write with `put`, `putInverted`, `putRepeated`, `set` in their own coordinates;
+  writes outside their size are dropped (long text is cut off). Continuous animation uses `now()`.
+- Cell colors: palette constants in `ui_assets.pde` (`GREEN`, `YELLOW`...) or any `color`.
+  Background 0 = none. Inverted characters use the block's background, else `BACKGROUND`.
+- Font: a custom Iosevka with "Term" spacing in `data/fonts/` — every glyph exactly one
+  cell, so there is no wide-character handling. `[assets]` logs glyphs wider than a cell: must be 0.
+  Only characters in `charBlockCharset()` draw; add a range there when a new symbol is needed.
+- Font sizes in code: `getDefaultSize()` (sketch pixels), not `getSize()` (2× on Retina).
+- Character animations: `data/anim/<name>.txt`, frames separated by a `---` line, loaded in
+  `loadAssets()` with `loadCharAnimation(name, fps, loop)`, played by `CharAnimationView`.
+- Naming trap: a method in a `.pde` class hides every sketch function with the same name
+  inside that class (a `CharBlock.fill()` would break `fill(color)` in its `draw()`).
+  Don't name methods after Processing functions the class calls.
+- Debug: `charBlockSelfCheck()` runs at startup when debug is on; the debug view shows
+  block draw time ("blocks … ms") — the number to watch on the Pi 3B.
+
 ### Hardware
 
 - Code reacts to `HwAction`s, never to raw keys/pins. Add new actions to `HwAction`.
@@ -132,7 +158,7 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 - Assets: fonts (later images, shaders) are loaded once in `loadAssets()` in `ui_assets.pde`,
   never on first use inside a screen (a first font lookup by name froze the Mac for 2+ s).
   One `PFont` per size; screens call `textFont(fontBody)` etc., not `textSize()`.
-  Font files live in `data/`.
+  Font files live in `data/` (Iosevka in `data/fonts/`).
 - Displayed numbers/times: use `ui_helpers.pde` (`fmtDecimal`, `fmtTemperature`,
   `fmtTime`, `fmtTimeUntil`) — locale-independent, so PC (Finnish locale), Mac and Pi match.
 - Anything drawn on top of screens: wrap in `pushStyle()`/`popStyle()`.
@@ -162,6 +188,7 @@ the Pi has no OS installed. Still needed for the Pi:
 - [ ] Check how long the first calendar parse takes on the 3B (about 0.6 s on the Mac)
 - [ ] Run the display at the same refresh rate as `FRAME_RATE`, otherwise motion is uneven
 - [ ] Measure video decode time on the 3B (debug view; ~10 ms per 720×720 frame on the Mac, budget 33 ms at 30 fps). Too slow → smaller frames drawn scaled up, or more decode threads
+- [ ] Measure character block draw time on the 3B (debug view "blocks … ms"; ~0.3 ms for the 42×21 demo on the Mac)
 - [ ] Measure FPS with the debug view; later test the CRT shader's performance on the 3B
 - [ ] Choose GPIO library (Pi4J / processing.io / other) and implement `HwPi` (buttons, encoder, LEDs, light sensor via ADC or I²C)
 
