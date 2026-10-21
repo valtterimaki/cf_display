@@ -14,17 +14,141 @@
 // The font must use Iosevka's "Term" spacing: every glyph exactly one cell wide.
 // The [assets] log line counts glyphs wider than a cell — it should say 0.
 
-// Font sizes are read with getDefaultSize(): the size in sketch pixels. getSize() is
-// doubled on high-density (Retina) screens, where glyph images are made at 2× size.
+/**
+ * The font of a block: a PFont for normal characters, plus images of the ones
+ * Processing can't draw.
+ *
+ * PFont stores characters as 16-bit chars, so symbols above U+FFFF (🞂 🕓, the
+ * sextants and octants of "Symbols for Legacy Computing") can't go through text().
+ * Those are drawn once at load with Java's own text renderer into one image, the
+ * atlas. In Cells they are stand-in chars from the Private Use Area (U+E000 on),
+ * and blocks draw them as tinted pieces of the atlas.
+ *
+ * Font sizes are read with getDefaultSize(): the size in sketch pixels. getSize() is
+ * doubled on high-density (Retina) screens, where glyph images are made at 2× size.
+ *
+ * Vertical metrics come from the font file's line height (lineAscent/lineDescent), not
+ * from PFont: PFont measures 'd' and 'p', which is shorter. Block and shade glyphs
+ * (░ █ │ 🮙) fill exactly the line height, and Figma centers text in it too.
+ */
+class CharFont {
+  final char EXTRA_FIRST = '\uE000';
+  final int ATLAS_COLUMNS = 32;
+  final int SLOT_PADDING = 2;   // empty pixels around each glyph, so smoothing doesn't bleed in neighbours
 
-/** Pixel width of one cell: the font's character width. */
-float charCellWidth(PFont font) {
-  return round(font.width('M') * font.getDefaultSize());
+  final PFont pfont;
+  final HashMap<Integer, Character> extraChars = new HashMap<Integer, Character>();   // code point → stand-in
+  final int extraCount;
+  final PImage atlas;
+  final int slotWidth, slotHeight;   // one glyph in the atlas, in font pixels (getSize())
+  final float lineAscent, lineDescent;   // above and below the baseline, relative to the font size
+
+  CharFont(String file, PFont pfont) {
+    this.pfont = pfont;
+    float size = pfont.getSize();
+
+    java.awt.Font awtFont;
+    try {
+      awtFont = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, createInput(file)).deriveFont(size);
+    }
+    catch (Exception e) {
+      throw new RuntimeException("[assets] can't read " + file + ": " + e);
+    }
+    java.awt.font.LineMetrics metrics = awtFont.getLineMetrics("M", new java.awt.font.FontRenderContext(null, true, true));
+    lineAscent = metrics.getAscent() / size;
+    lineDescent = metrics.getDescent() / size;
+
+    slotWidth = ceil(pfont.width('M') * size);
+    slotHeight = ceil((lineAscent + lineDescent) * size);
+
+    IntList codePoints = new IntList();
+    for (int[] range : charBlockExtraRanges()) {
+      for (int cp = range[0]; cp <= range[1]; cp++) {
+        if (awtFont.canDisplay(cp)) codePoints.append(cp);
+      }
+    }
+    extraCount = codePoints.size();
+
+    // White glyphs on transparent: drawing with tint() gives them any color
+    int strideX = slotWidth + 2 * SLOT_PADDING;
+    int strideY = slotHeight + 2 * SLOT_PADDING;
+    int atlasRows = max(1, ceil(extraCount / (float) ATLAS_COLUMNS));
+    java.awt.image.BufferedImage image = new java.awt.image.BufferedImage(
+      ATLAS_COLUMNS * strideX, atlasRows * strideY, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+    java.awt.Graphics2D g = image.createGraphics();
+    g.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+    g.setFont(awtFont);
+    g.setColor(java.awt.Color.WHITE);
+    for (int i = 0; i < extraCount; i++) {
+      int cp = codePoints.get(i);
+      extraChars.put(cp, (char) (EXTRA_FIRST + i));
+      float x = (i % ATLAS_COLUMNS) * strideX + SLOT_PADDING;
+      float baseline = (i / ATLAS_COLUMNS) * strideY + SLOT_PADDING + lineAscent * size;
+      g.drawString(new String(Character.toChars(cp)), x, baseline);
+    }
+    g.dispose();
+    atlas = new PImage(image);
+  }
+
+  /** Pixel width of one cell: the font's character width. */
+  float cellWidth() {
+    return round(pfont.width('M') * pfont.getDefaultSize());
+  }
+
+  /**
+   * Pixel height of one row. lineHeight 1.0 = the font's own line height (Figma's "auto"),
+   * where block glyphs of neighbouring rows touch. More spaces the rows out.
+   */
+  float cellHeight(float lineHeight) {
+    return round(lineHeight * lineBoxHeight());
+  }
+
+  /** The font's line height in sketch pixels. */
+  float lineBoxHeight() {
+    return (lineAscent + lineDescent) * pfont.getDefaultSize();
+  }
+
+  /** The char a Cell stores for a code point. Unknown symbols above U+FFFF become '?'. */
+  char cellChar(int codePoint) {
+    if (codePoint <= 0xFFFF) return (char) codePoint;
+    Character standIn = extraChars.get(codePoint);
+    return standIn != null ? standIn : '?';
+  }
+
+  boolean isExtra(char ch) {
+    return ch >= EXTRA_FIRST && ch < EXTRA_FIRST + extraCount;
+  }
+
+  /** Draws an extra glyph with its top-left corner at x, y (the top of the line box). */
+  void drawExtra(char ch, float x, float y, color textColor) {
+    int i = ch - EXTRA_FIRST;
+    int u = (i % ATLAS_COLUMNS) * (slotWidth + 2 * SLOT_PADDING) + SLOT_PADDING;
+    int v = (i / ATLAS_COLUMNS) * (slotHeight + 2 * SLOT_PADDING) + SLOT_PADDING;
+    float scale = pfont.getDefaultSize() / (float) pfont.getSize();
+    tint(textColor);
+    image(atlas, x, y, slotWidth * scale, slotHeight * scale, u, v, u + slotWidth, v + slotHeight);
+  }
+
+  /** Glyphs wider than one cell. Should be 0 with a "Term" font. */
+  int countWideGlyphs() {
+    // Glyph widths are in getSize() pixels. + 1 allows for rounding to whole pixels.
+    float limit = pfont.width('M') * pfont.getSize() + 1;
+    int count = 0;
+    for (int i = 0; i < pfont.getGlyphCount(); i++) {
+      if (pfont.getGlyph(i).setWidth > limit) count++;
+    }
+    return count;
+  }
 }
 
-/** Pixel height of one row. lineHeight 1.0 = the font size; more spaces the rows out. */
-float charCellHeight(PFont font, float lineHeight) {
-  return round(lineHeight * font.getDefaultSize());
+/** Loads a block font. Call in loadAssets(): it makes every glyph up front. */
+CharFont loadCharFont(String file, int size) {
+  // With a charset, every glyph is made now instead of on first use
+  CharFont font = new CharFont(file, createFont(file, size, true, charBlockCharset()));
+  println("[assets] char font " + file + ": " + font.pfont.getGlyphCount() + " glyphs + "
+    + font.extraCount + " drawn from an image, cell " + int(font.cellWidth()) + " px wide, "
+    + font.countWideGlyphs() + " wider than a cell");
+  return font;
 }
 
 class CharBlock {
@@ -33,7 +157,7 @@ class CharBlock {
   // set() and draw() share names with Processing functions too, but this class never
   // calls the sketch versions. Don't add a method named after one it does call.
 
-  final PFont font;
+  final CharFont font;
   final int cols, rows;
   final float cellWidth, cellHeight;
   color background = 0;   // 0 = none: only the Cells are drawn
@@ -46,12 +170,12 @@ class CharBlock {
   // Where writes currently go: the component being placed, or the whole block.
   int areaCol, areaRow, areaWidth, areaHeight;
 
-  CharBlock(PFont font, int cols, int rows, float lineHeight) {
+  CharBlock(CharFont font, int cols, int rows, float lineHeight) {
     this.font = font;
     this.cols = cols;
     this.rows = rows;
-    cellWidth = charCellWidth(font);
-    cellHeight = charCellHeight(font, lineHeight);
+    cellWidth = font.cellWidth();
+    cellHeight = font.cellHeight(lineHeight);
     chars = new char[cols * rows];
     fg = new color[cols * rows];
     bg = new color[cols * rows];
@@ -77,16 +201,19 @@ class CharBlock {
 
   // --- writing (coordinates relative to the area: the component, or the whole block) ---
 
-  /** Writes text from col to the right. Returns the column after it. */
+  /** Writes text from col to the right, one Cell per character. Returns the column after it. */
   int put(int col, int row, String text, color textColor) {
     return put(col, row, text, textColor, 0);
   }
 
   int put(int col, int row, String text, color textColor, color backgroundColor) {
-    for (int i = 0; i < text.length(); i++) {
-      set(col + i, row, text.charAt(i), textColor, backgroundColor);
+    // By code point: a symbol above U+FFFF is two Java chars but one character
+    int c = col;
+    for (int i = 0; i < text.length(); i += Character.charCount(text.codePointAt(i))) {
+      set(c, row, font.cellChar(text.codePointAt(i)), textColor, backgroundColor);
+      c++;
     }
-    return col + text.length();
+    return c;
   }
 
   /** Solid fillColor behind the text, characters cut out in the background color. */
@@ -144,19 +271,26 @@ class CharBlock {
       }
     }
 
-    // Glyphs centered vertically in the row
-    textFont(font);
+    // The font's line box centered vertically in the row, like Figma does
+    textFont(font.pfont);
     textAlign(LEFT, BASELINE);
-    float size = font.getDefaultSize();
-    float baseline = round((cellHeight - (font.ascent() + font.descent()) * size) / 2 + font.ascent() * size);
+    imageMode(CORNER);
+    float ascent = font.lineAscent * font.pfont.getDefaultSize();
+    float baseline = round((cellHeight - font.lineBoxHeight()) / 2 + ascent);
+    float glyphTop = baseline - ascent;   // where extra glyphs' images start
 
     // ponytail: one text() per character; draw same-color runs as one string if the Pi 3B is too slow
     for (int r = 0; r < rows; r++) {
       for (int c = 0; c < cols; c++) {
         int i = r * cols + c;
-        if (chars[i] == ' ') continue;
-        fill(fg[i]);
-        text(chars[i], left + c * cellWidth, top + r * cellHeight + baseline);
+        char ch = chars[i];
+        if (ch == ' ') continue;
+        if (font.isExtra(ch)) {
+          font.drawExtra(ch, left + c * cellWidth, top + r * cellHeight + glyphTop, fg[i]);
+        } else {
+          fill(fg[i]);
+          text(ch, left + c * cellWidth, top + r * cellHeight + baseline);
+        }
       }
     }
 
@@ -197,12 +331,16 @@ abstract class CharComponent {
 
 // --- Block effects ---
 // Run after the components have written and before block.draw().
-// The screen owns the timing: it passes progress, usually from tl.progress().
+// The screen owns the timing: it passes t every frame, from its timeline.
 // New idea for a reveal, glitch etc. = one more small class here.
 
 abstract class BlockEffect {
-  /** progress 1 = the block as written. Pass 1 - p to hide instead of reveal. */
-  abstract void apply(CharBlock block, float progress);
+  /**
+   * t is either progress 0..1, usually from tl.progress() (1 = the block as written,
+   * pass 1 - p to hide), or, for time-based effects, seconds since the effect started.
+   * Each effect says which.
+   */
+  abstract void apply(CharBlock block, float t);
 }
 
 /** Shows rows from the top down. */
@@ -230,6 +368,52 @@ class RevealRandom extends BlockEffect {
       int i = order.get(k);
       block.set(i % block.cols, i / block.cols, ' ', 0, 0);
     }
+  }
+}
+
+/**
+ * Shows the Cells in reading order, a run of random length at a time, with a random
+ * pause between runs. Time-based: pass seconds since the reveal started (tl.t()),
+ * and check isDone() to know when everything is shown.
+ * Runs count only Cells with something in them, so empty areas don't take time.
+ */
+class RevealChunks extends BlockEffect {
+  // Pauses lean toward minInterval: 1 = even spread, 2 = squared (most near the minimum), 3 = stronger
+  final float INTERVAL_BIAS = 4;
+
+  final int minLength, maxLength;          // Cells per run
+  final float minInterval, maxInterval;    // seconds between runs
+  int shown = 0;           // how many non-empty Cells are visible
+  float nextRun = 0;       // when the next run appears; the first one at once
+  boolean done = false;
+
+  RevealChunks(int minLength, int maxLength, float minInterval, float maxInterval) {
+    this.minLength = minLength;
+    this.maxLength = maxLength;
+    this.minInterval = minInterval;
+    this.maxInterval = maxInterval;
+  }
+
+  void apply(CharBlock block, float seconds) {
+    // A loop, not an if: after a slow frame several runs may be due at once
+    while (seconds >= nextRun) {
+      shown += int(random(minLength, maxLength + 1));
+      nextRun += lerp(minInterval, maxInterval, pow(random(1), INTERVAL_BIAS));
+    }
+
+    int count = 0;
+    for (int i = 0; i < block.chars.length; i++) {
+      boolean empty = block.chars[i] == ' ' && block.bg[i] == 0;
+      if (empty) continue;
+      if (count >= shown) block.set(i % block.cols, i / block.cols, ' ', 0, 0);
+      count++;
+    }
+    done = shown >= count;
+  }
+
+  /** True once every Cell is shown (as of the last apply). */
+  boolean isDone() {
+    return done;
   }
 }
 
@@ -301,7 +485,7 @@ class CharAnimation {
     int maxHeight = 0;
     for (String[] frame : frames) {
       maxHeight = max(maxHeight, frame.length);
-      for (String line : frame) maxWidth = max(maxWidth, line.length());
+      for (String line : frame) maxWidth = max(maxWidth, line.codePointCount(0, line.length()));
     }
     w = maxWidth;
     h = maxHeight;
@@ -358,15 +542,17 @@ char[] charBlockCharset() {
   return chars.toString().toCharArray();
 }
 
-/** Glyphs wider than one cell. Should be 0 with a "Term" font. */
-int countWideGlyphs(PFont font) {
-  // Glyph widths are in getSize() pixels. + 1 allows for rounding to whole pixels.
-  float limit = font.width('M') * font.getSize() + 1;
-  int count = 0;
-  for (int i = 0; i < font.getGlyphCount(); i++) {
-    if (font.getGlyph(i).setWidth > limit) count++;
-  }
-  return count;
+/**
+ * Symbols above U+FFFF a block can draw (see CharFont). Each one the font has is
+ * drawn into the atlas at load. Add a range here when a new symbol is needed.
+ */
+int[][] charBlockExtraRanges() {
+  return new int[][] {
+    { 0x1F550, 0x1F567 },   // clock faces (🕓)
+    { 0x1F780, 0x1F7FF },   // geometric shapes extended (🞂)
+    { 0x1FB00, 0x1FBFF },   // legacy computing: sextants, diagonals, hatching (🮙)
+    { 0x1CC00, 0x1CEBF },   // legacy computing supplement: octants (𜴳)
+  };
 }
 
 // --- self-check (run at startup when debug is on) ---
@@ -389,6 +575,7 @@ void charBlockSelfCheck() {
   // Whole-block writes past the edge, and a component partly off the left edge
   selfCheck(block.put(8, 3, "abc", WHITE) == 11, "put returns the next column");
   selfCheck(new String(block.chars, 3 * 10 + 8, 2).equals("ab"), "write past the block edge is dropped");
+  selfCheck(block.put(0, 2, "🞂x", WHITE) == 2 && block.chars[2 * 10 + 1] == 'x', "a symbol above U+FFFF takes one Cell");
   block.place(new CharComponent(2, 1) {
     void write(CharBlock b) {
       b.put(0, 0, "yz", WHITE);

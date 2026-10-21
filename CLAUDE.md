@@ -131,10 +131,17 @@ Block effect, Character animation). All in `char_block.pde`; `screen_charblock.p
   writes outside their size are dropped (long text is cut off). Continuous animation uses `now()`.
 - Cell colors: palette constants in `ui_assets.pde` (`GREEN`, `YELLOW`...) or any `color`.
   Background 0 = none. Inverted characters use the block's background, else `BACKGROUND`.
-- Font: a custom Iosevka with "Term" spacing in `data/fonts/` — every glyph exactly one
-  cell, so there is no wide-character handling. `[assets]` logs glyphs wider than a cell: must be 0.
-  Only characters in `charBlockCharset()` draw; add a range there when a new symbol is needed.
+- Font: a custom Iosevka with "Term" spacing in `data/fonts/`, loaded as a `CharFont` with
+  `loadCharFont(file, size)` — every glyph exactly one cell, so there is no wide-character
+  handling. `[assets]` logs glyphs wider than a cell: must be 0.
+- Only listed characters draw: `charBlockCharset()` for U+0000–FFFF (Processing fonts),
+  `charBlockExtraRanges()` for symbols above U+FFFF (🞂 🕓, legacy computing sextants and
+  octants). PFont can't draw those, so `CharFont` draws them into one image at load and Cells
+  hold Private Use Area stand-ins. Write the real characters in code: `put(0, 0, "🞂 09:00", c)`.
 - Font sizes in code: `getDefaultSize()` (sketch pixels), not `getSize()` (2× on Retina).
+  Vertical metrics: the font file's line height (`CharFont.lineAscent/lineDescent`), not
+  PFont's `ascent()/descent()` (measured from 'd' and 'p', too short). Block `lineHeight` 1.0 =
+  the font's line height, Figma's "auto": block glyphs (░ █ 🮙) of neighbouring rows touch.
 - Character animations: `data/anim/<name>.txt`, frames separated by a `---` line, loaded in
   `loadAssets()` with `loadCharAnimation(name, fps, loop)`, played by `CharAnimationView`.
 - Naming trap: a method in a `.pde` class hides every sketch function with the same name
