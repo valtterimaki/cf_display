@@ -101,7 +101,10 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 - Calendar: `DataCalendarIcs` reads every link in `config.json` `calendars` (Outlook
   published ICS, Google secret iCal address), expands recurring events with ical4j,
   converts times to the machine's local time, and merges the feeds (same title + start
-  = one event). A failing feed keeps its last events. Never log or display a feed URL —
+  = one event). A failing feed keeps its last events. `Event.hasCall`: a Teams or Meet link in
+  the event's DESCRIPTION, LOCATION or Teams/Meet properties (the camera icon on the calendar).
+  The calendar screen lists `DataCalendar.remainingToday()`: today's not-ended, non-all-day
+  events. Never log or display a feed URL —
   it's a secret. To test without real links, parse a local `.ics` file with the static
   `DataCalendarIcs.parseEvents()`, or serve test files with `python3 -m http.server`.
 
@@ -122,7 +125,8 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 ### Character blocks
 
 Grids of monospace characters (terms in `GLOSSARY.md`: Block, Cell, Component, Inverted,
-Block effect, Character animation). All in `char_block.pde`; `screen_charblock.pde` is the demo.
+Block effect, Character animation). All in `char_block.pde`; `screen_calendar.pde` is the
+first screen built with it.
 
 - A screen creates a `CharBlock` and its `CharComponent`s in `start()`. Every frame:
   `block.clear()` → `block.place(component, col, row)` for each → `effect.apply(block, progress)`

@@ -32,6 +32,14 @@ String fmtDate(LocalDate date) {
   return date.format(DATE_FORMAT);
 }
 
+/** Length of an event: "45 min", "1 h", "1 h 30 min" */
+String fmtDuration(LocalDateTime start, LocalDateTime end) {
+  long minutes = Duration.between(start, end).toMinutes();
+  if (minutes < 60) return minutes + " min";
+  if (minutes % 60 == 0) return (minutes / 60) + " h";
+  return (minutes / 60) + " h " + (minutes % 60) + " min";
+}
+
 /** "now", "in 4 min", "in 2 h 15 min" */
 String fmtTimeUntil(LocalDateTime time) {
   long minutes = Duration.between(LocalDateTime.now(), time).toMinutes();

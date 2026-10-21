@@ -33,8 +33,6 @@ final color WHITE      = #FFFFFF;
 
 CoreVideo videoRooster;   // 538×130 logo animation, plays once
 
-CharAnimation animSpinner;   // 4×4 pulsing square, loops
-
 void loadAssets() {
   int startMillis = millis();
 
@@ -52,7 +50,6 @@ void loadAssets() {
   fontChar = loadCharFont(CHAR_FONT_FILE, 21);
 
   videoRooster = loadVideo("rooster", 50, false);
-  animSpinner = loadCharAnimation("spinner", 4, true);
 
   println("[assets] loaded in " + (millis() - startMillis) + " ms");
 }

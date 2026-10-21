@@ -14,13 +14,16 @@ public class DataCalendar {
     public final LocalDateTime start;   // local time on this machine
     public final LocalDateTime end;
     public final boolean allDay;        // start and end are then midnights
+    public final boolean hasCall;       // a Teams or Meet call is attached
 
-    public Event(String calendar, String title, LocalDateTime start, LocalDateTime end, boolean allDay) {
+    public Event(String calendar, String title, LocalDateTime start, LocalDateTime end,
+                 boolean allDay, boolean hasCall) {
       this.calendar = calendar;
       this.title = title;
       this.start = start;
       this.end = end;
       this.allDay = allDay;
+      this.hasCall = hasCall;
     }
 
     /** Identifies the event, e.g. to avoid announcing it twice. */
@@ -38,12 +41,12 @@ public class DataCalendar {
     this.events = Collections.unmodifiableList(sorted);
   }
 
-  /** Events that haven't ended yet, soonest first, at most `max`. */
-  public List<Event> upcoming(LocalDateTime now, int max) {
+  /** Today's events that haven't ended yet, soonest first. All-day events are left out. */
+  public List<Event> remainingToday(LocalDateTime now) {
     List<Event> result = new ArrayList<>();
     for (Event e : events) {
-      if (e.end.isAfter(now)) result.add(e);
-      if (result.size() >= max) break;
+      boolean today = e.start.toLocalDate().equals(now.toLocalDate());
+      if (today && !e.allDay && e.end.isAfter(now)) result.add(e);
     }
     return result;
   }

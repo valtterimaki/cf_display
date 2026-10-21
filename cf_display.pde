@@ -42,8 +42,7 @@ void setup() {
   //scheduler.register("example",  () -> new ScreenExample());   // learning example (see screen_example.pde)
   //scheduler.register("clock",    () -> new ScreenClock());
   //scheduler.register("weather",  () -> new ScreenWeather());
-  //scheduler.register("calendar", () -> new ScreenCalendar());
-  scheduler.register("charblock", () -> new ScreenCharBlock());   // character block demo
+  scheduler.register("calendar", () -> new ScreenCalendar());
   scheduler.register("rooster",  () -> new ScreenRooster());
 
   scheduler.setTransition(new TransitionBasic());

@@ -161,7 +161,8 @@ public class DataCalendarIcs extends DataSource {
         if (!isReplacement && replacedOccurrences.contains(occurrenceKey)) continue;
 
         boolean allDay = occurrence.getStart() instanceof LocalDate;
-        events.add(new DataCalendar.Event(calendarName, title, start, toLocal(occurrence.getEnd()), allDay));
+        events.add(new DataCalendar.Event(calendarName, title, start, toLocal(occurrence.getEnd()),
+          allDay, mentionsCall(vevent)));
       }
     }
     return events;
@@ -193,6 +194,16 @@ public class DataCalendarIcs extends DataSource {
   private static String property(VEvent vevent, String name) {
     Optional<Property> property = vevent.getProperty(name);
     return property.map(Property::getValue).orElse("");
+  }
+
+  /**
+   * True if a Teams or Meet call is attached. Outlook puts the Teams link in DESCRIPTION
+   * and LOCATION, Google the Meet link in DESCRIPTION and X-GOOGLE-CONFERENCE.
+   */
+  private static boolean mentionsCall(VEvent vevent) {
+    String text = property(vevent, Property.DESCRIPTION) + " " + property(vevent, Property.LOCATION)
+      + " " + property(vevent, "X-MICROSOFT-SKYPETEAMSMEETINGURL") + " " + property(vevent, "X-GOOGLE-CONFERENCE");
+    return text.contains("teams.microsoft.com") || text.contains("meet.google.com");
   }
 
   /** The original start this event replaces, or null if it isn't a replacement. */
