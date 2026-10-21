@@ -38,10 +38,10 @@ void setup() {
   scheduler = new CoreScheduler();
 
   // Screens — registration order is the fallback cycle order
-  scheduler.register("example",  () -> new ScreenExample());   // learning example (see screen_example.pde)
-  scheduler.register("clock",    () -> new ScreenClock());
-  scheduler.register("weather",  () -> new ScreenWeather());
-  scheduler.register("calendar", () -> new ScreenCalendar());
+  //scheduler.register("example",  () -> new ScreenExample());   // learning example (see screen_example.pde)
+  //scheduler.register("clock",    () -> new ScreenClock());
+  //scheduler.register("weather",  () -> new ScreenWeather());
+  //scheduler.register("calendar", () -> new ScreenCalendar());
   scheduler.register("rooster",  () -> new ScreenRooster());
 
   scheduler.setTransition(new TransitionBasic());

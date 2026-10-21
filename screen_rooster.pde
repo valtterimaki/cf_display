@@ -3,7 +3,7 @@
 
 class ScreenRooster extends CoreScreen {
 
-  final float HOLD_LENGTH = 1.0;    // last frame stays this long after the video ends
+  final float HOLD_LENGTH = 10.0;    // last frame stays this long after the video ends
   final float OUTRO_LENGTH = 0.6;
 
   void drawIntro() {
