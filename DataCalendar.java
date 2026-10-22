@@ -9,16 +9,13 @@ import java.util.List;
 public class DataCalendar {
 
   public static class Event {
-    public final String calendar;       // which calendar it came from, e.g. "Work"
     public final String title;
     public final LocalDateTime start;   // local time on this machine
     public final LocalDateTime end;
     public final boolean allDay;        // start and end are then midnights
     public final boolean hasCall;       // a Teams or Meet call is attached
 
-    public Event(String calendar, String title, LocalDateTime start, LocalDateTime end,
-                 boolean allDay, boolean hasCall) {
-      this.calendar = calendar;
+    public Event(String title, LocalDateTime start, LocalDateTime end, boolean allDay, boolean hasCall) {
       this.title = title;
       this.start = start;
       this.end = end;

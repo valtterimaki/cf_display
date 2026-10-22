@@ -71,11 +71,7 @@ public class DataCalendarIcs extends DataSource {
     System.setProperty("ical4j.compatibility.outlook", "true");
   }
 
-  /**
-   * One calendar link from config, with its last good events.
-   * TODO: expose per-feed status (never loaded / last success time) so the calendar screen
-   * can show a warning when a feed failed — see the TODO in screen_calendar.pde.
-   */
+  /** One calendar link from config, with its last good events. (TODO in screen_calendar.pde) */
   private static class Feed {
     final String name;
     final String url;
@@ -138,7 +134,7 @@ public class DataCalendarIcs extends DataSource {
   /** One feed's download finished: parse it and update the store with all feeds' events. */
   private synchronized void feedArrived(Feed feed, String icsText, ZonedDateTime from, ZonedDateTime to) {
     try {
-      feed.events = parseEvents(icsText, feed.name, from, to);
+      feed.events = parseEvents(icsText, from, to);
     } catch (Exception e) {
       throw new java.util.concurrent.CompletionException(e);   // recorded by fetch() like a failed download
     }
@@ -150,8 +146,8 @@ public class DataCalendarIcs extends DataSource {
    * Turns ICS text into single events that overlap `from`..`to`, with recurring
    * events expanded. Separate from downloading, so it can be tested with a file.
    */
-  public static List<DataCalendar.Event> parseEvents(String icsText, String calendarName,
-                                                     ZonedDateTime from, ZonedDateTime to) throws Exception {
+  public static List<DataCalendar.Event> parseEvents(String icsText, ZonedDateTime from, ZonedDateTime to)
+      throws Exception {
     Calendar ics = new CalendarBuilder().build(new StringReader(icsText));
     List<VEvent> vevents = ics.getComponents(Component.VEVENT);
 
@@ -183,8 +179,7 @@ public class DataCalendarIcs extends DataSource {
         if (!isReplacement && replacedOccurrences.contains(occurrenceKey)) continue;
 
         boolean allDay = occurrence.getStart() instanceof LocalDate;
-        events.add(new DataCalendar.Event(calendarName, title, start, toLocal(occurrence.getEnd()),
-          allDay, mentionsCall(vevent)));
+        events.add(new DataCalendar.Event(title, start, toLocal(occurrence.getEnd()), allDay, mentionsCall(vevent)));
       }
     }
     return events;

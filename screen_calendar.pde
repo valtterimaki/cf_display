@@ -14,11 +14,10 @@ class ScreenCalendar extends CoreScreen {
   final int FIRST_ROW = 2;        // entries start below the header and one empty row
 
   CharBlock block;
-  CalendarHeader header;
+  final String date = fmtDate(LocalDate.now());   // read once: the screen lasts seconds, not days
   ArrayList<CalendarEntry> entries = new ArrayList<CalendarEntry>();
   int hiddenCount = 0;            // events that didn't fit: "+N MORE"
   boolean loading = false;        // no calendar fetched yet
-  OverlapRow overlap;
   BrailleNoise loader;
 
   RevealChunks reveal = new RevealChunks(3, 18, 0.01, 0.3);   // 3–18 Cells every 10–300 ms
@@ -28,8 +27,6 @@ class ScreenCalendar extends CoreScreen {
     int cols = floor((width - 2 * MARGIN) / fontChar.cellWidth());
     int rows = floor((height - 2 * MARGIN) / fontChar.cellHeight(LINE_HEIGHT));
     block = new CharBlock(fontChar, cols, rows, LINE_HEIGHT);
-    header = new CalendarHeader(cols);
-    overlap = new OverlapRow(cols - 5);
     loader = new BrailleNoise(4, 1, 0.1, GREEN);
 
     // TODO: design a warning graphic/pattern for failed calendar fetches. Today the screen
@@ -82,7 +79,9 @@ class ScreenCalendar extends CoreScreen {
    */
   void writeBlock() {
     block.clear();
-    block.place(header, 0, 0);
+    // "─┄ TODAY◢ 22.10.2026 ┄┄──────…" across the whole row
+    int headerEnd = block.put(0, 0, "─┄ TODAY◢ " + date + " ┄┄", GREEN);
+    block.putRepeated(headerEnd, 0, block.cols - headerEnd, '─', GREEN);
 
     if (loading) {
       int col = block.put(5, FIRST_ROW, "░   LOADING ", GREEN);
@@ -96,7 +95,12 @@ class ScreenCalendar extends CoreScreen {
       block.place(entry, 2, row);
       row += entry.h;
       boolean overlapsNext = i + 1 < entries.size() && entry.event.end.isAfter(entries.get(i + 1).event.start);
-      if (overlapsNext) block.place(overlap, 5, row);
+      if (overlapsNext) {
+        // "🮙🮙🮙 OVERLAP 🮙🮙🮙" in red
+        int col = block.put(5, row, "🮙🮙🮙", RED);
+        col = block.putInverted(col, row, " OVERLAP ", RED);
+        block.put(col, row, "🮙🮙🮙", RED);
+      }
       row += 1;
     }
 
@@ -110,20 +114,6 @@ class ScreenCalendar extends CoreScreen {
   void drawBlock() {
     background(BACKGROUND);
     block.draw(MARGIN, MARGIN);
-  }
-}
-
-/** "─┄ TODAY◢ 22.10.2026 ┄┄──────…" across the whole row. */
-class CalendarHeader extends CharComponent {
-  final String date = fmtDate(LocalDate.now());   // read once: the screen lasts seconds, not days
-
-  CalendarHeader(int w) {
-    super(w, 1);
-  }
-
-  void write(CharBlock block) {
-    int col = block.put(0, 0, "─┄ TODAY◢ " + date + " ┄┄", GREEN);
-    block.putRepeated(col, 0, w - col, '─', GREEN);
   }
 }
 
@@ -176,19 +166,5 @@ class CalendarEntry extends CharComponent {
     long minutes = (seconds + 59) / 60;   // rounded up: "1 MINUTE" lasts until it starts
     if (minutes > SOON_MINUTES) return null;
     return "🕓" + minutes + (minutes == 1 ? " MINUTE" : " MINUTES");
-  }
-}
-
-/** "🮙🮙🮙 OVERLAP 🮙🮙🮙" in red, between two overlapping events. */
-class OverlapRow extends CharComponent {
-
-  OverlapRow(int w) {
-    super(w, 1);
-  }
-
-  void write(CharBlock block) {
-    int col = block.put(0, 0, "🮙🮙🮙", RED);
-    col = block.putInverted(col, 0, " OVERLAP ", RED);
-    block.put(col, 0, "🮙🮙🮙", RED);
   }
 }

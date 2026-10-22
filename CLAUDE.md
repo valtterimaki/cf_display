@@ -171,7 +171,7 @@ first screen built with it.
   One `PFont` per size; screens call `textFont(fontBody)` etc., not `textSize()`.
   Font files live in `data/` (Iosevka in `data/fonts/`).
 - Displayed numbers/times: use `ui_helpers.pde` (`fmtDecimal`, `fmtTemperature`,
-  `fmtTime`, `fmtTimeUntil`) — locale-independent, so PC (Finnish locale), Mac and Pi match.
+  `fmtTime`, `fmtDuration`) — locale-independent, so PC (Finnish locale), Mac and Pi match.
 - Anything drawn on top of screens: wrap in `pushStyle()`/`popStyle()`.
 - P2D gotcha: an `arc()` with zero size or zero sweep prints a tessellation error — skip it.
 - Logging: `System.out.println("[tag] message")` with tags like `[screen]`, `[scheduler]`,
