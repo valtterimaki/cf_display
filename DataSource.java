@@ -75,8 +75,9 @@ public abstract class DataSource {
       status = Status.OK;
       lastSuccessMillis = System.currentTimeMillis();
       lastError = null;
-    } catch (Exception e) {
-      // Catch everything: an uncaught exception would silently stop future fetches.
+    } catch (Exception | Error e) {
+      // Catch everything, Errors too (e.g. a library class failing to load): anything
+      // uncaught makes the scheduler silently cancel all future fetches.
       status = Status.ERROR;
       lastError = e.getMessage();
       System.out.println("[data] " + name + " fetch failed: " + e.getMessage());

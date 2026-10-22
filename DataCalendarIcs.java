@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import net.fortuna.ical4j.data.CalendarBuilder;
 import net.fortuna.ical4j.model.Calendar;
@@ -48,6 +49,10 @@ import processing.data.JSONObject;
  * Parsing uses the ical4j library (jars in code/). Recurring events are
  * expanded into single events for the next DAYS_AHEAD days. If one feed fails,
  * its previous events are kept, so one broken link doesn't empty the screen.
+ *
+ * All feeds download at the same time, and each one updates the store as soon as
+ * it arrives: Outlook sometimes doesn't answer for a minute or more, and that
+ * shouldn't keep the other calendars off the screen.
  */
 public class DataCalendarIcs extends DataSource {
 
@@ -104,24 +109,37 @@ public class DataCalendarIcs extends DataSource {
     ZonedDateTime from = LocalDate.now().atStartOfDay(ZoneId.systemDefault());
     ZonedDateTime to = from.plusDays(DAYS_AHEAD);
 
-    List<String> counts = new ArrayList<>();
-    List<String> errors = new ArrayList<>();
+    // Start every download at once. Each feed is parsed and stored as soon as it arrives,
+    // on the HTTP client's threads.
+    List<String> errors = java.util.Collections.synchronizedList(new ArrayList<>());
+    List<CompletableFuture<Void>> pending = new ArrayList<>();
     for (Feed feed : feeds) {
-      try {
-        feed.events = parseEvents(download(feed.url), feed.name, from, to);
-        counts.add(feed.name + " " + feed.events.size());
-      } catch (Exception e) {
-        // Just the error type and message: never log the link, it's a secret.
-        String message = e.getMessage() == null ? "" : " " + e.getMessage();
-        errors.add(feed.name + ": " + e.getClass().getSimpleName() + message);
-      }
+      pending.add(download(feed.url)
+        .thenAccept(body -> feedArrived(feed, body, from, to))
+        .exceptionally(e -> {
+          // Just the error type and message: never log the link, it's a secret.
+          Throwable cause = e.getCause() != null ? e.getCause() : e;
+          String message = cause.getMessage() == null ? "" : " " + cause.getMessage();
+          errors.add(feed.name + ": " + cause.getClass().getSimpleName() + message);
+          return null;
+        }));
     }
+    CompletableFuture.allOf(pending.toArray(new CompletableFuture[0])).join();
 
-    store.setCalendar(new DataCalendar(mergeFeeds()));
-    if (!counts.isEmpty()) System.out.println("[data] calendar events: " + String.join(", ", counts));
-
+    if (feeds.isEmpty()) store.setCalendar(new DataCalendar(new ArrayList<>()));
     // Thrown after storing, so the feeds that worked still update.
     if (!errors.isEmpty()) throw new Exception(String.join("; ", errors));
+  }
+
+  /** One feed's download finished: parse it and update the store with all feeds' events. */
+  private synchronized void feedArrived(Feed feed, String icsText, ZonedDateTime from, ZonedDateTime to) {
+    try {
+      feed.events = parseEvents(icsText, feed.name, from, to);
+    } catch (Exception e) {
+      throw new java.util.concurrent.CompletionException(e);   // recorded by fetch() like a failed download
+    }
+    store.setCalendar(new DataCalendar(mergeFeeds()));
+    System.out.println("[data] calendar events: " + feed.name + " " + feed.events.size());
   }
 
   /**
@@ -170,15 +188,19 @@ public class DataCalendarIcs extends DataSource {
 
   // --- helpers ---
 
-  private String download(String url) throws Exception {
-    if (url.isEmpty()) throw new IOException("no url in config.json");
+  /** Starts downloading a feed. Completes with the ICS text, or fails (timeout, HTTP error...). */
+  private CompletableFuture<String> download(String url) {
+    if (url.isEmpty()) return CompletableFuture.failedFuture(new IOException("no url in config.json"));
     // Some apps hand out webcal:// links; they are plain https underneath.
     if (url.startsWith("webcal://")) url = "https://" + url.substring("webcal://".length());
 
     HttpRequest request = HttpRequest.newBuilder(URI.create(url)).timeout(TIMEOUT).GET().build();
-    HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-    if (response.statusCode() != 200) throw new IOException("HTTP " + response.statusCode());
-    return response.body();
+    return http.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(response -> {
+      if (response.statusCode() != 200) {
+        throw new java.util.concurrent.CompletionException(new IOException("HTTP " + response.statusCode()));
+      }
+      return response.body();
+    });
   }
 
   /** All feeds' events together. The same meeting in two calendars is kept once. */
