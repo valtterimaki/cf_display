@@ -71,7 +71,11 @@ public class DataCalendarIcs extends DataSource {
     System.setProperty("ical4j.compatibility.outlook", "true");
   }
 
-  /** One calendar link from config, with its last good events. */
+  /**
+   * One calendar link from config, with its last good events.
+   * TODO: expose per-feed status (never loaded / last success time) so the calendar screen
+   * can show a warning when a feed failed — see the TODO in screen_calendar.pde.
+   */
   private static class Feed {
     final String name;
     final String url;

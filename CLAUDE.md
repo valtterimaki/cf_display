@@ -206,6 +206,12 @@ the Pi has no OS installed. Still needed for the Pi:
 Other open items: verify the Mac run (step 0), sleep mode, CRT shader design, scheduler
 rules beyond cycling, button → action mapping.
 
+- [ ] Calendar fetch failure warning: design a warning graphic/pattern for the calendar
+  screen when a feed failed. Today one failed feed at startup silently shows only the other
+  feed's events (even "NO MORE EVENTS TODAY"), and a long outage shows old events as current.
+  TODOs in `screen_calendar.pde` and `DataCalendarIcs.java`. A disk cache of the last ICS
+  per feed (`data/cache/`, git-ignored) would also cover the startup case.
+
 Calendar access is decided: published ICS links (`DataCalendarIcs`). Microsoft Graph is
 only needed if a future account doesn't allow publishing; it would be another
 `DataCalendar<Provider>` source.

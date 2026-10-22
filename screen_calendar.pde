@@ -21,7 +21,7 @@ class ScreenCalendar extends CoreScreen {
   OverlapRow overlap;
   BrailleNoise loader;
 
-  RevealChunks reveal = new RevealChunks(4, 24, 0.05, 0.1);   // 4–24 Cells every 50–100 ms
+  RevealChunks reveal = new RevealChunks(3, 18, 0.01, 0.3);   // 3–18 Cells every 10–300 ms
   RevealLines hide = new RevealLines();
 
   void start() {
@@ -31,6 +31,11 @@ class ScreenCalendar extends CoreScreen {
     header = new CalendarHeader(cols);
     overlap = new OverlapRow(cols - 5);
     loader = new BrailleNoise(4, 1, 0.1, GREEN);
+
+    // TODO: design a warning graphic/pattern for failed calendar fetches. Today the screen
+    // can't tell: if one feed fails at startup it shows only the other feed's events (even
+    // "NO MORE EVENTS TODAY"), and after a long outage it shows old events as current.
+    // Needs per-feed status (never loaded / last success time) from DataCalendarIcs.
 
     // A snapshot: rows don't jump around mid-animation if new data arrives
     DataCalendar calendar = store.calendar();
