@@ -5,8 +5,9 @@
 //   ─┄ TODAY◢ 22.10.2026 ┄┄─────────────
 //      ░ 🞂  09:00   🕓12 MINUTES ......1 h
 //      ░    DAILY STAND-UP
-// Intro: Cells appear in runs of random length. Outro: rows disappear from the bottom up.
-// The timeline isn't animated yet.
+// Intro: Cells appear in runs of random length. At the same time the timeline's ticks
+// appear left to right, then its events one by one (white, fading to their color), and
+// last the now marker. Outro: rows disappear from the bottom up; the timeline stays.
 
 class ScreenCalendar extends CoreScreen {
 
@@ -40,6 +41,11 @@ class ScreenCalendar extends CoreScreen {
 
   RevealChunks reveal = new RevealChunks(3, 18, 0.01, 0.3);   // 3–18 Cells every 10–300 ms
   RevealLines hide = new RevealLines();
+
+  // Timeline intro, in seconds
+  final float TICKS_LENGTH = 0.5;   // ticks appear left to right
+  final float EVENT_STEP = 0.2;     // then events, left to right, one every 0.2 s
+  final float EVENT_FADE = 0.1;     // each starts white and fades to its color
 
   void start() {
     int cols = floor((width - 2 * MARGIN) / fontChar.cellWidth());
@@ -77,20 +83,20 @@ class ScreenCalendar extends CoreScreen {
   void drawIntro() {
     writeBlock();
     reveal.apply(block, tl.t());
-    drawScreen();
-    if (reveal.isDone()) nextPhase();
+    drawScreen(tl.t());
+    if (reveal.isDone() && tl.t() >= timelineIntroLength()) nextPhase();
   }
 
   void drawMain() {
     writeBlock();
-    drawScreen();
+    drawScreen(timelineIntroLength());
     if (tl.t() >= MAIN_LENGTH) nextPhase();
   }
 
   void drawOutro() {
     writeBlock();
     hide.apply(block, 1 - tl.progress(0, OUTRO_LENGTH));
-    drawScreen();
+    drawScreen(timelineIntroLength());
     if (tl.t() >= OUTRO_LENGTH) nextPhase();
   }
 
@@ -133,17 +139,28 @@ class ScreenCalendar extends CoreScreen {
     block.put(5, row, hiddenCount > 0 ? "░   +" + hiddenCount + " MORE" : "░   END", GREEN);
   }
 
-  void drawScreen() {
+  /** timelineT: seconds into the timeline's intro; timelineIntroLength() or more = all shown. */
+  void drawScreen(float timelineT) {
     background(BACKGROUND);
-    drawTimeline();
+    drawTimeline(timelineT);
     block.draw(MARGIN, BLOCK_TOP);
+  }
+
+  /** Ticks, then one EVENT_STEP per event; the now marker appears at the end. */
+  float timelineIntroLength() {
+    return TICKS_LENGTH + timelineEvents.size() * EVENT_STEP;
+  }
+
+  float eventAppearTime(int i) {
+    return TICKS_LENGTH + i * EVENT_STEP;
   }
 
   /**
    * Today's events as bars on the 08:00–18:00 grid, and a marker at the current time.
    * Ended events are gray. Where two events that haven't ended overlap, both bars are red.
+   * t: seconds into the intro, see timelineIntroLength().
    */
-  void drawTimeline() {
+  void drawTimeline(float t) {
     LocalDateTime now = LocalDateTime.now();
     noStroke();
 
@@ -151,7 +168,9 @@ class ScreenCalendar extends CoreScreen {
     // 1 px rects instead of lines, so they stay sharp.
     fill(GREEN);
     float tickTop = TIMELINE_TOP + 28;
-    for (int i = 0; i <= (TIMELINE_LAST_HOUR - TIMELINE_FIRST_HOUR) * 2; i++) {
+    int tickCount = (TIMELINE_LAST_HOUR - TIMELINE_FIRST_HOUR) * 2 + 1;
+    for (int i = 0; i < tickCount; i++) {
+      if (t < i * TICKS_LENGTH / tickCount) break;   // this tick and the ones right of it aren't shown yet
       float x = TIMELINE_LEFT + i * HOUR_WIDTH / 2;
       if (i % 8 == 0) {
         rect(x, tickTop, 1, 24);
@@ -162,23 +181,29 @@ class ScreenCalendar extends CoreScreen {
       }
     }
 
+    // Events are sorted by start, so they appear left to right
     for (int i = 0; i < timelineEvents.size(); i++) {
+      if (t < eventAppearTime(i)) break;
       DataCalendar.Event event = timelineEvents.get(i);
-      drawBar(event, lanes[i], event.start, event.end, hasEnded(event, now) ? GRAY : GREEN);
+      color c = hasEnded(event, now) ? GRAY : GREEN;
+      drawBar(event, lanes[i], event.start, event.end, appearColor(c, t - eventAppearTime(i)));
     }
 
-    // Overlaps in red on both bars. Events are sorted by start, so only later events
-    // can overlap an event. An overlap is over once either event has ended: it stays gray.
+    // Overlaps in red on both bars, appearing with the later event. Only later events can
+    // overlap an event. An overlap is over once either event has ended: it stays gray.
     for (int i = 0; i < timelineEvents.size(); i++) {
       DataCalendar.Event a = timelineEvents.get(i);
       for (int j = i + 1; j < timelineEvents.size() && timelineEvents.get(j).start.isBefore(a.end); j++) {
         DataCalendar.Event b = timelineEvents.get(j);
-        if (hasEnded(a, now) || hasEnded(b, now)) continue;
+        if (t < eventAppearTime(j) || hasEnded(a, now) || hasEnded(b, now)) continue;
         LocalDateTime overlapEnd = a.end.isBefore(b.end) ? a.end : b.end;
-        drawBar(a, lanes[i], b.start, overlapEnd, RED);
-        drawBar(b, lanes[j], b.start, overlapEnd, RED);
+        color c = appearColor(RED, t - eventAppearTime(j));
+        drawBar(a, lanes[i], b.start, overlapEnd, c);
+        drawBar(b, lanes[j], b.start, overlapEnd, c);
       }
     }
+
+    if (t < timelineIntroLength()) return;
 
     // Now: a 2 px line, and on top of it a pill with a 2 px yellow outline
     float nowX = timeToX(now);
@@ -197,6 +222,11 @@ class ScreenCalendar extends CoreScreen {
     fill(c);
     rect(left, TIMELINE_TOP + 44 + lane * LANE_STEP, timeToX(to) - left, BAR_HEIGHT,
       leftRadius, rightRadius, rightRadius, leftRadius);
+  }
+
+  /** White when an event appears, fading to its color in EVENT_FADE. age: seconds since it appeared. */
+  color appearColor(color c, float age) {
+    return lerpColor(WHITE, c, constrain(age / EVENT_FADE, 0, 1));
   }
 
   /** Not clamped: times outside the grid land past its ends. */
