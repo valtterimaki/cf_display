@@ -34,7 +34,10 @@ void setup() {
 
   // After starting the sources, so their first fetch runs while fonts load
   loadAssets();
-  if (debugVisible) charBlockSelfCheck();
+  if (debugVisible) {
+    charBlockSelfCheck();
+    calendarSelfCheck();
+  }
 
   scheduler = new CoreScheduler();
 

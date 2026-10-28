@@ -104,7 +104,9 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
   = one event). A failing feed keeps its last events. `Event.hasCall`: a Teams or Meet link in
   the event's DESCRIPTION, LOCATION or Teams/Meet properties (the camera icon on the calendar).
   The calendar screen lists `DataCalendar.remainingToday()`: today's not-ended, non-all-day
-  events. Never log or display a feed URL —
+  events. Above the list, a timeline (plain shapes, not a Block) shows all of `today()` on
+  an 08:00–18:00 grid: ended events gray, overlaps red, events outside the grid drawn past
+  its ends. Never log or display a feed URL —
   it's a secret. To test without real links, parse a local `.ics` file with the static
   `DataCalendarIcs.parseEvents()`, or serve test files with `python3 -m http.server`.
 

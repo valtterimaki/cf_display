@@ -587,5 +587,5 @@ void charBlockSelfCheck() {
 }
 
 void selfCheck(boolean ok, String what) {
-  if (!ok) throw new RuntimeException("[charblock] self-check failed: " + what);
+  if (!ok) throw new RuntimeException("[selfcheck] failed: " + what);
 }

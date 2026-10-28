@@ -30,6 +30,7 @@ final color GREEN      = #549680;
 final color YELLOW     = #DCD356;
 final color RED        = #E33F5F;
 final color WHITE      = #FFFFFF;
+final color GRAY       = #B2B2B2;   // things that are over, e.g. ended events
 
 CoreVideo videoRooster;   // 538×130 logo animation, plays once
 

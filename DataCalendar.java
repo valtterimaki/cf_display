@@ -38,12 +38,20 @@ public class DataCalendar {
     this.events = Collections.unmodifiableList(sorted);
   }
 
+  /** All events starting today, ended ones too, soonest first. All-day events are left out. */
+  public List<Event> today(LocalDateTime now) {
+    List<Event> result = new ArrayList<>();
+    for (Event e : events) {
+      if (e.start.toLocalDate().equals(now.toLocalDate()) && !e.allDay) result.add(e);
+    }
+    return result;
+  }
+
   /** Today's events that haven't ended yet, soonest first. All-day events are left out. */
   public List<Event> remainingToday(LocalDateTime now) {
     List<Event> result = new ArrayList<>();
-    for (Event e : events) {
-      boolean today = e.start.toLocalDate().equals(now.toLocalDate());
-      if (today && !e.allDay && e.end.isAfter(now)) result.add(e);
+    for (Event e : today(now)) {
+      if (e.end.isAfter(now)) result.add(e);
     }
     return result;
   }
