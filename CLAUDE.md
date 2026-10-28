@@ -180,8 +180,8 @@ first screen built with it.
   `[data]`, `[trigger]`, `[hw]`, `[input]`, `[config]`, `[assets]`.
 - Secrets and per-machine settings: `data/config.json` (git-ignored). Template with
   every key: `data/config.example.json` — keep it updated when adding keys.
-- Git: LF line endings (`.gitattributes`). One commit per finished step. Push only
-  when the owner asks.
+- Git: LF line endings (`.gitattributes`). Never commit or push on your own: only when
+  the owner asks. One commit per finished step.
 
 ## Status and pending work
 
