@@ -105,7 +105,8 @@ class ScreenCalendar extends CoreScreen {
     }
 
     if (entries.isEmpty()) {
-      block.put(5, row, "░   NO MORE EVENTS TODAY", GREEN);
+      int col = block.put(5, row, "░   ", GREEN);
+      block.putInverted(col, row, " NO MORE EVENTS TODAY ", GREEN);
       row += 2;
     }
     block.put(5, row, hiddenCount > 0 ? "░   +" + hiddenCount + " MORE" : "░   END", GREEN);
