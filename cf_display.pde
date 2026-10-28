@@ -26,6 +26,11 @@ void setup() {
   frameRate(FRAME_RATE);
 
   debugVisible = config.getBoolean("debug", false);
+  String fakeTime = config.getString("fakeTime", "");
+  if (!fakeTime.isEmpty()) {
+    CoreClock.fakeTimeOfDay(java.time.LocalTime.parse(fakeTime));
+    println("[config] fake time of day: " + fakeTime);
+  }
   hardware = createHardware(config.getString("hardware", "simulated"));
 
   store = new DataStore();

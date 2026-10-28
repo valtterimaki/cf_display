@@ -17,7 +17,7 @@ public class DataCalendarFake extends DataSource {
     super("calendar", 30);
     this.store = store;
 
-    LocalDateTime start = LocalDateTime.now().withNano(0);
+    LocalDateTime start = CoreClock.now().withNano(0);
     addEvent("Stand-up",        start.plusSeconds(330), 15,  false);
     addEvent("Design review",   start.plusMinutes(45),  90,  true);
     addEvent("Lunch",           start.plusMinutes(120), 45,  false);

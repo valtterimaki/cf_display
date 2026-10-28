@@ -55,7 +55,7 @@ class ScreenClock extends CoreScreen {
   }
 
   void drawSecondsDot() {
-    float a = -HALF_PI + TWO_PI * LocalDateTime.now().getSecond() / 60.0;
+    float a = -HALF_PI + TWO_PI * CoreClock.now().getSecond() / 60.0;
     float r = RING_SIZE / 2;
     noStroke();
     fill(240, 120, 80);
@@ -67,6 +67,6 @@ class ScreenClock extends CoreScreen {
     noStroke();
     textAlign(CENTER, CENTER);
     textFont(fontHuge);
-    text(fmtTime(LocalDateTime.now()), width / 2, height / 2 + offsetY);
+    text(fmtTime(CoreClock.now()), width / 2, height / 2 + offsetY);
   }
 }

@@ -165,6 +165,9 @@ first screen built with it.
 ## Conventions
 
 - Time: seconds as `float`, from `now()` in `cf_display.pde` (the only clock read).
+  Date and time of day: `CoreClock.now()` / `CoreClock.today()`, never `LocalDateTime.now()`.
+  `config.json` `"fakeTime": "08:45"` makes the sketch pretend it's that time of day
+  (to see the calendar while developing at night); `""` = the real time.
 - Frame rate: `FRAME_RATE` in `cf_display.pde` is the only place to change it (the video
   timing and the debug graph follow it). Keep the display's refresh rate the same, e.g.
   50 fps on a 60 Hz screen can't be even. A video's own fps (`loadVideo`) is its render rate.

@@ -5,7 +5,7 @@
 //   ─┄ TODAY◢ 22.10.2026 ┄┄─────────────
 //      ░ 🞂  09:00   🕓12 MINUTES ......1 h
 //      ░    DAILY STAND-UP
-// Intro: Cells appear in runs of random length. At the same time the timeline's ticks
+// Intro: Cells appear in runs of random length. Once all are shown, the timeline's ticks
 // appear left to right, then its events one by one (white, fading to their color), and
 // last the now marker. Outro: rows disappear from the bottom up; the timeline stays.
 
@@ -30,8 +30,8 @@ class ScreenCalendar extends CoreScreen {
   final float LANE_STEP = 14;       // bar height + gap
 
   CharBlock block;
-  final String date = fmtDate(LocalDate.now());   // read once: the screen lasts seconds, not days
-  final LocalDateTime timelineStart = LocalDate.now().atTime(TIMELINE_FIRST_HOUR, 0);
+  final String date = fmtDate(CoreClock.today());   // read once: the screen lasts seconds, not days
+  final LocalDateTime timelineStart = CoreClock.today().atTime(TIMELINE_FIRST_HOUR, 0);
   java.util.List<DataCalendar.Event> timelineEvents = new ArrayList<DataCalendar.Event>();
   int[] lanes = new int[0];       // lane of each timeline event, 0 = top
   ArrayList<CalendarEntry> entries = new ArrayList<CalendarEntry>();
@@ -43,9 +43,12 @@ class ScreenCalendar extends CoreScreen {
   RevealLines hide = new RevealLines();
 
   // Timeline intro, in seconds
-  final float TICKS_LENGTH = 0.5;   // ticks appear left to right
-  final float EVENT_STEP = 0.2;     // then events, left to right, one every 0.2 s
+  final float TICKS_LENGTH = 0.3;   // ticks appear left to right
+  final float EVENT_STEP = 0.1;     // then events, left to right, one every 0.1 s
   final float EVENT_FADE = 0.1;     // each starts white and fades to its color
+  final float MARKER_DROP = 0.3;    // last the now marker slides down into place
+  final float MARKER_DROP_HEIGHT = 10;
+  float revealDoneAt = -1;          // tl.t() when the block was fully shown; the timeline starts then
 
   void start() {
     int cols = floor((width - 2 * MARGIN) / fontChar.cellWidth());
@@ -64,7 +67,7 @@ class ScreenCalendar extends CoreScreen {
       loading = true;
       return;
     }
-    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime now = CoreClock.now();
     timelineEvents = calendar.today(now);
     lanes = timelineLanes(timelineEvents);
     java.util.List<DataCalendar.Event> events = calendar.remainingToday(now);
@@ -83,8 +86,10 @@ class ScreenCalendar extends CoreScreen {
   void drawIntro() {
     writeBlock();
     reveal.apply(block, tl.t());
-    drawScreen(tl.t());
-    if (reveal.isDone() && tl.t() >= timelineIntroLength()) nextPhase();
+    if (reveal.isDone() && revealDoneAt < 0) revealDoneAt = tl.t();
+    float timelineT = revealDoneAt < 0 ? -1 : tl.t() - revealDoneAt;   // negative: nothing shown yet
+    drawScreen(timelineT);
+    if (timelineT >= timelineIntroLength()) nextPhase();
   }
 
   void drawMain() {
@@ -146,8 +151,12 @@ class ScreenCalendar extends CoreScreen {
     block.draw(MARGIN, BLOCK_TOP);
   }
 
-  /** Ticks, then one EVENT_STEP per event; the now marker appears at the end. */
+  /** Ticks, then one EVENT_STEP per event, then the now marker drops in. */
   float timelineIntroLength() {
+    return markerAppearTime() + MARKER_DROP;
+  }
+
+  float markerAppearTime() {
     return TICKS_LENGTH + timelineEvents.size() * EVENT_STEP;
   }
 
@@ -161,7 +170,7 @@ class ScreenCalendar extends CoreScreen {
    * t: seconds into the intro, see timelineIntroLength().
    */
   void drawTimeline(float t) {
-    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime now = CoreClock.now();
     noStroke();
 
     // A tick every half hour: dotted on half hours, solid on hours, long every 4 hours.
@@ -203,15 +212,25 @@ class ScreenCalendar extends CoreScreen {
       }
     }
 
-    if (t < timelineIntroLength()) return;
+    if (t < markerAppearTime()) return;
 
-    // Now: a 2 px line, and on top of it a pill with a 2 px yellow outline
+    // Now: a pill with a 2 px yellow outline, and a 2 px line down from it.
+    // It appears MARKER_DROP_HEIGHT above its place and slides down while fading in.
+    // A real outline, not a black pill on a yellow one: those would show through each other.
+    float progress = constrain((t - markerAppearTime()) / MARKER_DROP, 0, 1);
+    float eased = CoreEase.cubicBezier(0.5, 0, 0, 1, progress);
+    float top = TIMELINE_TOP - MARKER_DROP_HEIGHT * (1 - eased);
+    float alpha = 255 * eased;
     float nowX = timeToX(now);
-    fill(YELLOW);
-    rect(nowX - 1, TIMELINE_TOP + 12, 2, 44);
-    rect(nowX - 5, TIMELINE_TOP, 10, 24, 5);
-    fill(BACKGROUND);
-    rect(nowX - 3, TIMELINE_TOP + 2, 6, 20, 3);
+    pushStyle();
+    fill(YELLOW, alpha);
+    rect(nowX - 1, top + 24, 2, 32);
+    noFill();
+    stroke(YELLOW, alpha);
+    strokeWeight(2);
+    strokeJoin(ROUND);   // the default MITER leaves a spike where P2D closes the outline
+    rect(nowX - 4, top + 1, 8, 22, 4);
+    popStyle();
   }
 
   /** The part from–to of an event's bar. Where it reaches the event's own start or end, it's rounded. */
@@ -316,7 +335,7 @@ class CalendarEntry extends CharComponent {
 
   /** "NOW", "🕓12 MINUTES" or null. Worked out every frame, so it counts down live. */
   String badgeText() {
-    long seconds = java.time.Duration.between(LocalDateTime.now(), event.start).getSeconds();
+    long seconds = java.time.Duration.between(CoreClock.now(), event.start).getSeconds();
     if (seconds <= 0) return "NOW";
     long minutes = (seconds + 59) / 60;   // rounded up: "1 MINUTE" lasts until it starts
     if (minutes > SOON_MINUTES) return null;

@@ -68,6 +68,38 @@ public class CoreEase {
     return x == 1 ? 1 : 1 - (float) Math.pow(2, -10 * x);
   }
 
+  public static float inOutExpo(float x) {
+    if (x == 0 || x == 1) return x;
+    return x < 0.5f
+      ? (float) Math.pow(2, 20 * x - 10) / 2
+      : (2 - (float) Math.pow(2, -20 * x + 10)) / 2;
+  }
+
+  // --- custom curve ---
+
+  /**
+   * Like CSS cubic-bezier(x1, y1, x2, y2): a curve from (0, 0) to (1, 1) bent by two
+   * control points. Design one at cubic-bezier.com and copy the four numbers.
+   * x1 and x2 must be 0..1 (as in CSS); y1 and y2 can go outside it to overshoot.
+   */
+  public static float cubicBezier(float x1, float y1, float x2, float y2, float x) {
+    // Find the point on the curve whose x is the given x by halving the range:
+    // x only grows along the curve, and 20 halvings are far below a pixel.
+    float low = 0, high = 1, t = x;
+    for (int i = 0; i < 20; i++) {
+      t = (low + high) / 2;
+      if (bezier(x1, x2, t) < x) low = t;
+      else high = t;
+    }
+    return bezier(y1, y2, t);
+  }
+
+  /** One coordinate of a cubic Bézier curve from 0 to 1, with control values a and b, at t. */
+  private static float bezier(float a, float b, float t) {
+    float u = 1 - t;
+    return 3 * u * u * t * a + 3 * u * t * t * b + t * t * t;
+  }
+
   // --- overshoot ---
 
   /** Goes a little past the end, then settles back. */

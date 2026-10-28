@@ -2,6 +2,7 @@
   "hardware": "simulated",
   "fullscreen": false,
   "debug": true,
+  "fakeTime": "",
   "sources": {
     "weather": "fake",
     "calendar": "fake"

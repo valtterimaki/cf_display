@@ -40,7 +40,7 @@ public class CoreTriggers {
     DataCalendar calendar = store.calendar();
     if (calendar == null) return;
 
-    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime now = CoreClock.now();
     for (DataCalendar.Event event : calendar.events) {
       if (event.allDay) continue;   // starts at midnight, nothing to get ready for
       long secondsUntil = Duration.between(now, event.start).getSeconds();

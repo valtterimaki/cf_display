@@ -106,7 +106,7 @@ public class DataCalendarIcs extends DataSource {
   }
 
   protected void fetch() throws Exception {
-    ZonedDateTime from = LocalDate.now().atStartOfDay(ZoneId.systemDefault());
+    ZonedDateTime from = CoreClock.today().atStartOfDay(ZoneId.systemDefault());
     ZonedDateTime to = from.plusDays(DAYS_AHEAD);
 
     // Start every download at once. Each feed is parsed and stored as soon as it arrives,
