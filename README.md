@@ -108,4 +108,4 @@ buttons or triggers like an upcoming meeting), otherwise it cycles through scree
 
 ## Raspberry Pi
 
-Not set up yet. See the pending list in [CLAUDE.md](CLAUDE.md) and step 8 in [PLAN.md](PLAN.md).
+Not set up yet. See the to-do list in [docs/pi.md](docs/pi.md) and step 8 in [PLAN.md](PLAN.md).

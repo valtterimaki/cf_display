@@ -5,12 +5,20 @@ Guidance for Claude Code sessions working in this repo.
 ## Project
 
 cf_display is a desk info display: Raspberry Pi (3B, maybe newer later) + 720×720 screen,
-running a Processing 4 (Java) sketch that starts on boot. The owner is a hobbyist
-coder: keep code **clean and professional but easy to read**. Clear names, short
-comments explaining *why*, no clever tricks, no unnecessary abstraction.
+running a Processing 4 (Java) sketch that starts on boot. The owner is a hobbyist coder:
+code stays easy to read ([CODING_STANDARDS.md](CODING_STANDARDS.md)).
 
 Developed on Windows and macOS in VS Code; code goes via GitHub to the Pi, which
 builds and runs it itself. See [PLAN.md](PLAN.md) for the full plan and history of decisions.
+
+## Topic docs
+
+Read the matching doc before working on:
+
+- **Calendar** (`DataCalendar*`, `screen_calendar.pde`, ICS feeds, the timeline): [docs/calendar.md](docs/calendar.md)
+- **Character blocks** (`char_block.pde`, any Block-based screen, the char font): [docs/char-blocks.md](docs/char-blocks.md)
+- **Video** (`CoreVideo`, `data/video/`, frame export): [docs/video.md](docs/video.md)
+- **Raspberry Pi** (setup, deployment, performance to measure): [docs/pi.md](docs/pi.md)
 
 ## Build and run
 
@@ -20,6 +28,8 @@ Processing 4.5+ has its CLI built into the main executable (no `processing-java`
 - macOS: `/Applications/Processing.app/Contents/MacOS/Processing cli --sketch="<repo>" --run`
 - Compile only (fast check, no window): replace `--run` with `--build`
 - VS Code: default build task "Run sketch" (`Ctrl/Cmd+Shift+B`)
+- `scripts/check.sh`: rule checks + build, ~2 s. Also the pre-commit hook, enabled once
+  per clone with `git config core.hooksPath scripts/hooks`.
 
 Harmless console noise: `display count needs to be implemented for non-AWT`,
 `AWT disabled, displayWidth/displayHeight will be 0`, `Could not set writable for all`.
@@ -28,8 +38,10 @@ VS Code's Java diagnostics show false errors for this sketch (it doesn't underst
 Processing merges `.pde` files). Trust the Processing build, not the red squiggles.
 
 When verifying changes: build, then run for a while and read the console log
-(every component logs with a `[tag]` prefix). For visual checks, temporarily add
-`saveFrame("<scratchpad>/shot_####.png")` at a given `frameCount` — and remove it after.
+(every component logs with a `[tag]` prefix). For visual checks, set `config.json`
+`"capture": [300, 500]`: those frames land in `capture/` and the sketch quits by itself
+(set it back to `[]` after). Runs in the foreground, so each one ends on its own.
+`"fakeTime": "08:45"` picks the time of day to look at.
 
 ## Architecture rules
 
@@ -46,14 +58,14 @@ When verifying changes: build, then run for a while and read the console log
 
 | Prefix | Kind | Examples |
 |---|---|---|
-| `Core*.java` | engine | `CoreScreen`, `CoreScheduler`, `CoreTimeline`, `CoreEase`, `CoreConfig`, `CoreTriggers`, `CoreTransition`, `CoreVideo` |
+| `Core*.java` | engine | `CoreScreen`, `CoreScheduler`, `CoreTimeline`, `CoreEase`, `CoreClock`, `CoreConfig`, `CoreTriggers`, `CoreTransition`, `CoreVideo` |
 | `Hw*.java` | hardware | `HwAction`, `HwDevice`, `HwSimulated`, `HwPi` |
 | `Data*.java` | data | `DataStore`, `DataSource`, `DataWeather`, `DataWeatherFake`, `DataCalendarIcs` |
 | `screen_*.pde` | one screen per file | `screen_clock.pde` → `class ScreenClock` |
 | `transition_*.pde` | between-screen animations | `transition_basic.pde` |
 | `ui_*.pde` | shared drawing/formatting helpers, assets | `ui_helpers.pde`, `ui_assets.pde` |
 | `char_*.pde` | character blocks | `char_block.pde` |
-| `debug_*.pde` | debug view | `debug_overlay.pde` |
+| `debug_*.pde` | debug view, capture mode | `debug_overlay.pde`, `debug_capture.pde` |
 
 `cf_display.pde` is only wiring: settings/setup/draw, registering screens, creating
 sources and hardware, routing input. Keep logic out of it.
@@ -74,16 +86,14 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 - Methods are written **without `public`** (the base class declares them package-private
   on purpose, so `.pde` code looks like normal Processing).
 - `tl` is a `CoreTimeline` restarting at 0 each phase: `tl.t()`, `tl.progress(start, dur)`,
-  `tl.once(at)`, `tl.between(a, b)`, `tl.every(interval)`. Combine with `CoreEase.*`.
+  `tl.once(at)`, `tl.between(a, b)`, `tl.every(interval)`. Combine with `CoreEase.*`
+  (`CoreEase.cubicBezier(x1, y1, x2, y2, x)` takes numbers from cubic-bezier.com).
 - Screens are fresh instances each time unless `keepsState()` returns true.
 - Screens read data from `store` (can be null before first fetch — always handle it)
   and never fetch anything themselves. Snapshot lists in `start()` if rows must not
   change mid-animation.
 - Register in `cf_display.pde`: `scheduler.register("id", () -> new ScreenX());`
   Registration order = fallback cycle order = number keys in simulation.
-- Animations are hand-crafted per screen. Don't build generic effect systems — only
-  timing building blocks. One exception: Block effects (see Character blocks) are small
-  reusable classes; the screen still decides when they run and passes their progress.
 
 ### Scheduler and triggers
 
@@ -98,128 +108,39 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 - `fetch()` runs on a background thread; put an immutable result in `DataStore`.
   Throwing is fine — the error is recorded and old data kept.
 - Never do network or file I/O on the draw thread.
-- Calendar: `DataCalendarIcs` reads every link in `config.json` `calendars` (Outlook
-  published ICS, Google secret iCal address), expands recurring events with ical4j,
-  converts times to the machine's local time, and merges the feeds (same title + start
-  = one event). A failing feed keeps its last events. `Event.hasCall`: a Teams or Meet link in
-  the event's DESCRIPTION, LOCATION or Teams/Meet properties (the camera icon on the calendar).
-  The calendar screen lists `DataCalendar.remainingToday()`: today's not-ended, non-all-day
-  events. Above the list, a timeline (plain shapes, not a Block) shows all of `today()` on
-  an 08:00–18:00 grid: ended events gray, overlaps red, events outside the grid drawn past
-  its ends. Never log or display a feed URL —
-  it's a secret. To test without real links, parse a local `.ics` file with the static
-  `DataCalendarIcs.parseEvents()`, or serve test files with `python3 -m http.server`.
-
-### Video
-
-- Videos are frame sequences in `data/video/<name>/`, files named
-  `<name>_<5-digit frame number>` (`rooster_00000.png`, from After Effects) —
-  `.jpg` for footage, `.png` for transparency or flat graphics. Played by `CoreVideo`,
-  not the Processing video library (GStreamer): it was unreliable on the Pi in an
-  earlier project.
-- Load in `loadAssets()` with `loadVideo(name, fps, loop)`; screens draw
-  `image(video.frame(seconds), x, y, w, h)` — any size, tint or shader.
-- A background thread decodes a few frames ahead into reused arrays. Debug view shows
-  per video: average decode time vs. budget (1000 / fps ms) and late frames.
-- Frame export: `ffmpeg -i in.mov -vf scale=720:720 -q:v 3 data/video/<name>/<name>_%05d.jpg`
-  (PNG with alpha: `-pix_fmt rgba .../<name>_%05d.png`).
-
-### Character blocks
-
-Grids of monospace characters (terms in `GLOSSARY.md`: Block, Cell, Component, Inverted,
-Block effect, Character animation). All in `char_block.pde`; `screen_calendar.pde` is the
-first screen built with it.
-
-- A screen creates a `CharBlock` and its `CharComponent`s in `start()`. Every frame:
-  `block.clear()` → `block.place(component, col, row)` for each → `effect.apply(block, progress)`
-  → `block.draw(x, y)`. Stacking is a loop with a row counter in the screen, no layout engine.
-- Components write with `put`, `putInverted`, `putRepeated`, `set` in their own coordinates;
-  writes outside their size are dropped (long text is cut off). Continuous animation uses `now()`.
-- Cell colors: palette constants in `ui_assets.pde` (`GREEN`, `YELLOW`...) or any `color`.
-  Background 0 = none. Inverted characters use the block's background, else `BACKGROUND`.
-- Font: a custom Iosevka with "Term" spacing in `data/fonts/`, loaded as a `CharFont` with
-  `loadCharFont(file, size)` — every glyph exactly one cell, so there is no wide-character
-  handling. `[assets]` logs glyphs wider than a cell: must be 0.
-- Only listed characters draw: `charBlockCharset()` for U+0000–FFFF (Processing fonts),
-  `charBlockExtraRanges()` for symbols above U+FFFF (🞂 🕓, legacy computing sextants and
-  octants). PFont can't draw those, so `CharFont` draws them into one image at load and Cells
-  hold Private Use Area stand-ins. Write the real characters in code: `put(0, 0, "🞂 09:00", c)`.
-- Font sizes in code: `getDefaultSize()` (sketch pixels), not `getSize()` (2× on Retina).
-  Vertical metrics: the font file's line height (`CharFont.lineAscent/lineDescent`), not
-  PFont's `ascent()/descent()` (measured from 'd' and 'p', too short). Block `lineHeight` 1.0 =
-  the font's line height, Figma's "auto": block glyphs (░ █ 🮙) of neighbouring rows touch.
-- Character animations: `data/anim/<name>.txt`, frames separated by a `---` line, loaded in
-  `loadAssets()` with `loadCharAnimation(name, fps, loop)`, played by `CharAnimationView`.
-- Naming trap: a method in a `.pde` class hides every sketch function with the same name
-  inside that class (a `CharBlock.fill()` would break `fill(color)` in its `draw()`).
-  Don't name methods after Processing functions the class calls.
-- Debug: `charBlockSelfCheck()` runs at startup when debug is on; the debug view shows
-  block draw time ("blocks … ms") — the number to watch on the Pi 3B.
 
 ### Hardware
 
 - Code reacts to `HwAction`s, never to raw keys/pins. Add new actions to `HwAction`.
-- `HwSimulated` (desktop, keyboard/mouse) and `HwPi` (GPIO) chosen by `"hardware"` in
-  config. Never comment code in/out for desktop vs Pi — use the config switch.
+- `HwSimulated` (desktop, keyboard/mouse) and `HwPi` (GPIO) chosen by `"hardware"` in config.
 
 ## Conventions
 
 - Time: seconds as `float`, from `now()` in `cf_display.pde` (the only clock read).
-  Date and time of day: `CoreClock.now()` / `CoreClock.today()`, never `LocalDateTime.now()`.
-  `config.json` `"fakeTime": "08:45"` makes the sketch pretend it's that time of day
-  (to see the calendar while developing at night); `""` = the real time.
+  Date and time of day: `CoreClock.now()` / `CoreClock.today()`, so config `"fakeTime"`
+  (pretend it's that time of day; `""` = real time) reaches every screen and source.
 - Frame rate: `FRAME_RATE` in `cf_display.pde` is the only place to change it (the video
   timing and the debug graph follow it). Keep the display's refresh rate the same, e.g.
-  50 fps on a 60 Hz screen can't be even. A video's own fps (`loadVideo`) is its render rate.
+  50 fps on a 60 Hz screen can't be even.
 - Assets: fonts (later images, shaders) are loaded once in `loadAssets()` in `ui_assets.pde`,
   never on first use inside a screen (a first font lookup by name froze the Mac for 2+ s).
-  One `PFont` per size; screens call `textFont(fontBody)` etc., not `textSize()`.
   Font files live in `data/` (Iosevka in `data/fonts/`).
-- Displayed numbers/times: use `ui_helpers.pde` (`fmtDecimal`, `fmtTemperature`,
-  `fmtTime`, `fmtDuration`) — locale-independent, so PC (Finnish locale), Mac and Pi match.
-- Anything drawn on top of screens: wrap in `pushStyle()`/`popStyle()`.
-- P2D gotcha: an `arc()` with zero size or zero sweep prints a tessellation error — skip it.
-- Logging: `System.out.println("[tag] message")` with tags like `[screen]`, `[scheduler]`,
-  `[data]`, `[trigger]`, `[hw]`, `[input]`, `[config]`, `[assets]`.
+- Naming trap: a method in a `.pde` class hides every sketch function with the same name
+  inside that class (a `CharBlock.fill()` would break `fill(color)` in its `draw()`).
+  Name methods differently from the Processing functions the class calls.
+- P2D gotchas: an `arc()` with zero size or zero sweep prints a tessellation error — skip it.
+  A stroked rounded `rect()` gets a spike where the outline closes unless `strokeJoin(ROUND)`.
 - Secrets and per-machine settings: `data/config.json` (git-ignored). Template with
   every key: `data/config.example.json` — keep it updated when adding keys.
 - Git: LF line endings (`.gitattributes`). Never commit or push on your own: only when
   the owner asks. One commit per finished step.
 
-## Status and pending work
+## Status
 
-Steps 0–7 and 9 of PLAN.md are done. **Step 8 (Raspberry Pi) is not done yet** —
-the Pi has no OS installed. Still needed for the Pi:
-
-- [ ] Check which display interface the 720×720 screen uses (HDMI or DSI) and its config (timings, rotation)
-- [ ] Install Raspberry Pi OS Lite 64-bit, minimal X11 (`xserver-xorg`, `xinit`), git
-- [ ] Install Processing 4.5.x Linux ARM 64-bit; verify the CLI path/command on Linux
-- [ ] Check the KMS GL driver (`dtoverlay=vc4-kms-v3d`) and that P2D runs on the 3B
-- [ ] Write `scripts/pi-setup.md` (step-by-step install notes) and `scripts/run-pi.sh`
-- [ ] Autostart: console auto-login → `~/.bash_profile` runs `startx` on tty1 → `~/.xinitrc` runs `scripts/run-pi.sh`
-- [ ] `run-pi.sh`: disable screen blanking (`xset s off -dpms`), hide the mouse cursor, maybe restart the sketch if it crashes
-- [ ] Update flow over SSH: `git pull` + restart sketch (script or reboot)
-- [ ] Pi `data/config.json`: `"hardware": "pi"`, `"fullscreen": true`, `"debug": false`, calendar links
-- [ ] Set the Pi's time zone (`raspi-config` → Localisation): calendar times are shown in the machine's local time
-- [ ] Check how long the first calendar parse takes on the 3B (about 0.6 s on the Mac)
-- [ ] Run the display at the same refresh rate as `FRAME_RATE`, otherwise motion is uneven
-- [ ] Measure video decode time on the 3B (debug view; ~10 ms per 720×720 frame on the Mac, budget 33 ms at 30 fps). Too slow → smaller frames drawn scaled up, or more decode threads
-- [ ] Measure character block draw time on the 3B (debug view "blocks … ms"; ~0.3 ms for the 42×21 demo on the Mac)
-- [ ] Measure FPS with the debug view; later test the CRT shader's performance on the 3B
-- [ ] Choose GPIO library (Pi4J / processing.io / other) and implement `HwPi` (buttons, encoder, LEDs, light sensor via ADC or I²C)
-
+Steps 0–7 and 9 of PLAN.md are done; step 8 (Raspberry Pi) is not ([docs/pi.md](docs/pi.md)).
 Other open items: verify the Mac run (step 0), sleep mode, CRT shader design, scheduler
-rules beyond cycling, button → action mapping.
-
-- [ ] Calendar fetch failure warning: design a warning graphic/pattern for the calendar
-  screen when a feed failed. Today one failed feed at startup silently shows only the other
-  feed's events (even "NO MORE EVENTS TODAY"), and a long outage shows old events as current.
-  TODOs in `screen_calendar.pde` and `DataCalendarIcs.java`. A disk cache of the last ICS
-  per feed (`data/cache/`, git-ignored) would also cover the startup case.
-
-Calendar access is decided: published ICS links (`DataCalendarIcs`). Microsoft Graph is
-only needed if a future account doesn't allow publishing; it would be another
-`DataCalendar<Provider>` source.
+rules beyond cycling, button → action mapping, the calendar fetch failure warning
+([docs/calendar.md](docs/calendar.md)).
 
 ## Agent skills
 
@@ -233,4 +154,4 @@ Default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-huma
 
 ### Domain docs
 
-Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context: `GLOSSARY.md` at the repo root; ADRs go in `docs/adr/` (created with the first one). See `docs/agents/domain.md`.

@@ -26,6 +26,7 @@ void setup() {
   frameRate(FRAME_RATE);
 
   debugVisible = config.getBoolean("debug", false);
+  loadCaptureFrames();
   String fakeTime = config.getString("fakeTime", "");
   if (!fakeTime.isEmpty()) {
     CoreClock.fakeTimeOfDay(java.time.LocalTime.parse(fakeTime));
@@ -69,6 +70,7 @@ void draw() {
 
   debugEndFrame();
   if (debugVisible) drawDebugOverlay();
+  captureUpdate();
 }
 
 /** Current time in seconds. The one place the sketch reads the clock. */

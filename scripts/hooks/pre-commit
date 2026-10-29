@@ -1,0 +1,4 @@
+#!/bin/sh
+# Enabled with: git config core.hooksPath scripts/hooks
+# Skip once (e.g. a docs-only commit while Processing isn't installed): git commit --no-verify
+exec "$(git rev-parse --show-toplevel)/scripts/check.sh"

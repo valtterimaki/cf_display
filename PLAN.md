@@ -9,7 +9,7 @@ placeholder screens, and Pi boot setup. No real APIs, no CRT shader yet.
 
 > **Status (2026-09-26):** steps 0–7 and 9 done on desktop (Windows). **Step 8 (Pi)
 > postponed** until the hardware is at hand — the detailed to-do list is in
-> [CLAUDE.md](CLAUDE.md) under "Status and pending work". Mac run (step 0) not yet verified.
+> [docs/pi.md](docs/pi.md). Mac run (step 0) not yet verified.
 
 ---
 
@@ -300,7 +300,7 @@ Each step ends in something runnable. Work on desktop first; Pi at step 8.
 - `debug_overlay.pde` with the info listed in 2.9.
 - ✅ Done when: toggling shows fps, screen/phase, queue, hardware and source status.
 
-**Step 8 — Pi** ⏸ *postponed — see pending list in CLAUDE.md*
+**Step 8 — Pi** ⏸ *postponed — see the to-do list in [docs/pi.md](docs/pi.md)*
 - Write `scripts/pi-setup.md` and `scripts/run-pi.sh`; set up the Pi from a fresh
   Pi OS Lite 64-bit image.
 - ✅ Done when: Pi boots straight into the sketch fullscreen, `git pull` + restart

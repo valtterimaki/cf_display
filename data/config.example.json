@@ -3,6 +3,7 @@
   "fullscreen": false,
   "debug": true,
   "fakeTime": "",
+  "capture": [],
   "sources": {
     "weather": "fake",
     "calendar": "fake"
