@@ -317,8 +317,14 @@ Each step ends in something runnable. Work on desktop first; Pi at step 8.
 
 ---
 
-## 5. Open questions (not blocking the skeleton)
+## 5. Open issues
 
+The one list of open items, questions and things to design. Add new ones here, remove
+them when done. Details can live in a topic doc, linked from here.
+
+- **Mac run** (step 0) not verified yet.
+- **Real screen content:** most screens are still placeholders.
+- **Calendar fetch failure warning** needs a design ([docs/calendar.md](docs/calendar.md)).
 - **Display:** HDMI or DSI? Affects Pi config in step 8.
 - ~~**Calendar:** Graph or ICS?~~ Decided: ICS links (see 2.7). Client accounts
   that don't allow publishing would need their own solution (Graph, or busy-only ICS).
@@ -329,3 +335,5 @@ Each step ends in something runnable. Work on desktop first; Pi at step 8.
 - **Pi model:** 3B unless performance forces an upgrade.
 - **Scheduler rules** beyond simple cycling.
 - **Button → action mapping.**
+- **Home: missed timer state** (rang, nobody pressed a button) needs a design. For now
+  home shows nothing for it (no arc, no text).

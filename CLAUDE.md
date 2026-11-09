@@ -147,19 +147,17 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 
 Steps 0–7 and 9 of PLAN.md are done; step 8 (Raspberry Pi) is not ([docs/pi.md](docs/pi.md)).
 The final screen flow structure is in (home, visits, rotation, timer, sleep/wake, browsing),
-with placeholder content. Other open items: verify the Mac run (step 0), CRT shader design,
-real screen content, button → GPIO mapping (`HwPi`), the calendar fetch failure warning
-([docs/calendar.md](docs/calendar.md)).
+with placeholder content. All open items are listed in [PLAN.md §5 Open issues](PLAN.md).
 
 ## Agent skills
 
 ### Issue tracker
 
-Issues live in GitHub Issues on `valtterimaki/cf_display` (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
+No GitHub Issues. Open issues are a list in PLAN.md §5. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+Not used (no issue tracker with labels).
 
 ### Domain docs
 
