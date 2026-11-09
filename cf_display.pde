@@ -52,7 +52,6 @@ void setup() {
   //scheduler.register("clock",    () -> new ScreenClock());
   //scheduler.register("weather",  () -> new ScreenWeather());
   scheduler.register("calendar", () -> new ScreenCalendar());
-  scheduler.register("rooster",  () -> new ScreenRooster());
 
   scheduler.setTransition(new TransitionBasic());
   scheduler.start(now());

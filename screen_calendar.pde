@@ -5,9 +5,11 @@
 //   ─┄ TODAY◢ 22.10.2026 ┄┄─────────────
 //      ░ 🞂  09:00   🕓12 MINUTES ......1 h
 //      ░    DAILY STAND-UP
-// Intro: Cells appear in runs of random length. Once all are shown, the timeline's ticks
-// appear left to right, then its events one by one (white, fading to their color), and
-// last the now marker. Outro: rows disappear from the bottom up; the timeline stays.
+// Intro: first the rooster logo animation plays centered (a video, see CoreVideo.java),
+// holds, then moves to the top left corner while scaling down. Then Cells appear in runs
+// of random length. Once all are shown, the timeline's ticks appear left to right, then its
+// events one by one (white, fading to their color), and last the now marker.
+// Outro: rows disappear from the bottom up and the logo fades out; the timeline stays.
 
 class ScreenCalendar extends CoreScreen {
 
@@ -28,6 +30,13 @@ class ScreenCalendar extends CoreScreen {
   final float HOUR_WIDTH = 48;
   final float BAR_HEIGHT = 12;
   final float LANE_STEP = 14;       // bar height + gap
+
+  // Rooster logo. Placeholder end position and timing, to be tuned.
+  final float LOGO_HOLD = 1.0;      // the last frame stays centered this long
+  final float LOGO_MOVE = 0.8;      // then it moves to the corner
+  final float LOGO_SCALE = 0.5;     // size in the corner
+  final float LOGO_LEFT = MARGIN;   // top left of the logo in the corner
+  final float LOGO_TOP = MARGIN;
 
   CharBlock block;
   final String date = fmtDate(CoreClock.today());   // read once: the screen lasts seconds, not days
@@ -84,24 +93,30 @@ class ScreenCalendar extends CoreScreen {
   }
 
   void drawIntro() {
+    float contentT = tl.t() - logoIntroLength();   // the rest starts once the logo is in the corner
+    if (contentT < 0) {
+      background(BACKGROUND);
+      drawLogo(tl.t(), 255);
+      return;
+    }
     writeBlock();
-    reveal.apply(block, tl.t());
+    reveal.apply(block, contentT);
     if (reveal.isDone() && revealDoneAt < 0) revealDoneAt = tl.t();
     float timelineT = revealDoneAt < 0 ? -1 : tl.t() - revealDoneAt;   // negative: nothing shown yet
-    drawScreen(timelineT);
+    drawScreen(timelineT, 255);
     if (timelineT >= timelineIntroLength()) nextPhase();
   }
 
   void drawMain() {
     writeBlock();
-    drawScreen(timelineIntroLength());
+    drawScreen(timelineIntroLength(), 255);
     if (tl.t() >= MAIN_LENGTH) nextPhase();
   }
 
   void drawOutro() {
     writeBlock();
     hide.apply(block, 1 - tl.progress(0, OUTRO_LENGTH));
-    drawScreen(timelineIntroLength());
+    drawScreen(timelineIntroLength(), 255 * (1 - tl.progress(0, OUTRO_LENGTH)));
     if (tl.t() >= OUTRO_LENGTH) nextPhase();
   }
 
@@ -145,10 +160,30 @@ class ScreenCalendar extends CoreScreen {
   }
 
   /** timelineT: seconds into the timeline's intro; timelineIntroLength() or more = all shown. */
-  void drawScreen(float timelineT) {
+  void drawScreen(float timelineT, float logoAlpha) {
     background(BACKGROUND);
+    drawLogo(logoIntroLength(), logoAlpha);
     drawTimeline(timelineT);
     block.draw(MARGIN, BLOCK_TOP);
+  }
+
+  /** Video, hold, move to the corner. */
+  float logoIntroLength() {
+    return videoRooster.duration() + LOGO_HOLD + LOGO_MOVE;
+  }
+
+  /**
+   * The logo t seconds into its intro: the video centered, then (past its end, showing the
+   * last frame) moving to the corner. logoIntroLength() or more = in the corner.
+   */
+  void drawLogo(float t, float alpha) {
+    float move = CoreEase.inOutExpo(constrain((t - videoRooster.duration() - LOGO_HOLD) / LOGO_MOVE, 0, 1));
+    float scale = lerp(1, LOGO_SCALE, move);
+    float x = lerp((width - videoRooster.width()) / 2, LOGO_LEFT, move);
+    float y = lerp((height - videoRooster.height()) / 2, LOGO_TOP, move);
+    tint(255, alpha);
+    image(videoRooster.frame(t), x, y, videoRooster.width() * scale, videoRooster.height() * scale);
+    noTint();
   }
 
   /** Ticks, then one EVENT_STEP per event, then the now marker drops in. */
