@@ -13,6 +13,9 @@ public interface HwDevice {
   /** Next action waiting to be handled, or null if none. */
   HwAction pollAction();
 
+  /** True while the presence sensor detects someone at the desk. */
+  boolean presence();
+
   /** Ambient light, 0 = dark, 1 = bright. */
   float lightLevel();
 

@@ -44,7 +44,8 @@ void drawDebugOverlay() {
   String[] lines = {
     debugPerformanceLine(),
     debugScreenLine(),
-    debugQueueLine(),
+    debugVisitLine(),
+    debugFlowLine(),
     debugHardwareLine(),
   };
   String[] sourceLines = concat(debugSourceLines(), debugVideoLines());
@@ -101,9 +102,16 @@ String debugScreenLine() {
     + "  " + fmtDecimal(screen.phaseTime(), 1) + " s";
 }
 
-String debugQueueLine() {
-  java.util.List<String> queued = scheduler.queuedIds();
-  return "QUEUE  " + (queued.isEmpty() ? "(empty)" : String.join(", ", queued));
+String debugVisitLine() {
+  java.util.List<String> planned = scheduler.plannedIds();
+  return "VISIT  " + (planned.isEmpty() ? "(none)" : String.join(", ", planned));
+}
+
+String debugFlowLine() {
+  return "FLOW   " + (presence.isAsleep() ? "asleep" : "awake")
+    + "   away " + round(presence.awayFor(now())) + " s"
+    + "   here " + round(presence.presentFor(now()) / 60) + " min"
+    + "   timer " + timer.state() + " " + fmtTimer(timer.remaining(now()), false);
 }
 
 String debugHardwareLine() {

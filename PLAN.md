@@ -10,6 +10,10 @@ placeholder screens, and Pi boot setup. No real APIs, no CRT shader yet.
 > **Status (2026-09-26):** steps 0–7 and 9 done on desktop (Windows). **Step 8 (Pi)
 > postponed** until the hardware is at hand — the detailed to-do list is in
 > [docs/pi.md](docs/pi.md). Mac run (step 0) not yet verified.
+>
+> **Update (2026-11-09):** the scheduler's queue and fallback cycle (2.5) are replaced by
+> the final screen flow: home → visit (reminders + rotation) → home, plus interrupts
+> (timer, alarm, sleep/wake, knob browsing). See CLAUDE.md "Scheduler and triggers".
 
 ---
 

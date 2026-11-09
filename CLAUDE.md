@@ -73,10 +73,11 @@ sources and hardware, routing input. Keep logic out of it.
 ### How things flow
 
 ```
-HwDevice ──actions──▶ cf_display.handleActions() ──▶ scheduler.skip()/request() or screen.onAction()
+HwDevice ──actions──▶ cf_display.handleActions() ──▶ triggers.wake/browse, timer, scheduler.interrupt() or screen.onAction()
 DataSource (background thread) ──▶ DataStore ◀── screens read while drawing
-CoreTriggers (reads DataStore) ──request()──▶ CoreScheduler queue
+CoreTriggers (DataStore, CorePresence, CoreTimer) ──planVisit()/interrupt()──▶ CoreScheduler
 CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──▶ transition ──▶ next screen
+               home ──▶ visit (reminders + rotation) ──▶ home; interrupts cut in and end at home
 ```
 
 ### Screens
@@ -93,13 +94,19 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
   and never fetch anything themselves. Snapshot lists in `start()` if rows must not
   change mid-animation.
 - Register in `cf_display.pde`: `scheduler.register("id", () -> new ScreenX());`
-  Registration order = fallback cycle order = number keys in simulation.
+  To put it in the rotation, add its id to `CoreTriggers.ROTATION` (order = number keys).
+- Content not designed yet: register a `ScreenPlaceholder(title, note, seconds)`.
 
 ### Scheduler and triggers
 
-- Requests are **queued, never interrupting**. `request(id, priority)` is thread-safe.
-- Trigger rules ("event in 5 min → show calendar") go in `CoreTriggers`, not in data
-  sources. Sources only fetch; triggers only decide.
+- Home (3 min) → **visit** → home. When home ends, `CoreTriggers.planVisit()` lists the
+  visit once: event alert / break reminder if due, then `rotationNow()` (the rotation
+  with its rules, e.g. bus only from 14:00 — add new reorder/skip rules there).
+- `scheduler.interrupt(id)` cuts in right away (no transition) and drops the rest of the
+  visit: timer button, alarm, sleep/wake, knob browsing.
+- Rules go in `CoreTriggers`, not in data sources. Sources only fetch; triggers only decide.
+  Timer and presence state: `CoreTimer`, `CorePresence` (pure logic, self-checked in
+  `debug_flow_check.pde`). Everything runs on the draw thread.
 
 ### Data
 
@@ -138,8 +145,9 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 ## Status
 
 Steps 0–7 and 9 of PLAN.md are done; step 8 (Raspberry Pi) is not ([docs/pi.md](docs/pi.md)).
-Other open items: verify the Mac run (step 0), sleep mode, CRT shader design, scheduler
-rules beyond cycling, button → action mapping, the calendar fetch failure warning
+The final screen flow structure is in (home, visits, rotation, timer, sleep/wake, browsing),
+with placeholder content. Other open items: verify the Mac run (step 0), CRT shader design,
+real screen content, button → GPIO mapping (`HwPi`), the calendar fetch failure warning
 ([docs/calendar.md](docs/calendar.md)).
 
 ## Agent skills

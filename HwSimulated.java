@@ -8,7 +8,9 @@ import processing.core.PConstants;
  * The sketch forwards key and mouse wheel events here. Key map:
  *
  *   Space / →      SKIP
- *   1 – 9          SHOW_SCREEN (1 = first registered screen)
+ *   1 – 9          SHOW_SCREEN (1 = first rotation screen)
+ *   T              TIMER_BUTTON
+ *   P              presence on / off (starts on)
  *   D              TOGGLE_DEBUG
  *   , / .          ENCODER_TURN -1 / +1   (mouse wheel works too)
  *   Enter          ENCODER_PRESS
@@ -23,6 +25,7 @@ public class HwSimulated implements HwDevice {
   private final ConcurrentLinkedQueue<HwAction> actions = new ConcurrentLinkedQueue<>();
   private final float[] leds = new float[LED_COUNT];
   private float light = 0.5f;
+  private boolean present = true;
 
   // --- events forwarded from the sketch ---
 
@@ -31,6 +34,11 @@ public class HwSimulated implements HwDevice {
       push(new HwAction(HwAction.Type.SKIP));
     } else if (key >= '1' && key <= '9') {
       push(new HwAction(HwAction.Type.SHOW_SCREEN, key - '1'));
+    } else if (key == 't' || key == 'T') {
+      push(new HwAction(HwAction.Type.TIMER_BUTTON));
+    } else if (key == 'p' || key == 'P') {
+      present = !present;
+      System.out.println("[hw] presence " + (present ? "on" : "off"));
     } else if (key == 'd' || key == 'D') {
       push(new HwAction(HwAction.Type.TOGGLE_DEBUG));
     } else if (key == ',') {
@@ -59,6 +67,10 @@ public class HwSimulated implements HwDevice {
 
   public HwAction pollAction() {
     return actions.poll();
+  }
+
+  public boolean presence() {
+    return present;
   }
 
   public float lightLevel() {

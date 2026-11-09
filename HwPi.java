@@ -2,7 +2,8 @@
  * Real device hardware via GPIO.
  *
  * STUB: the GPIO library (Pi4J, processing.io or other) is not chosen yet.
- * For now it produces no input, reports full light, and remembers LED values.
+ * For now it produces no input, always reports presence and full light,
+ * and remembers LED values.
  */
 public class HwPi implements HwDevice {
 
@@ -20,6 +21,10 @@ public class HwPi implements HwDevice {
 
   public HwAction pollAction() {
     return null;
+  }
+
+  public boolean presence() {
+    return true;
   }
 
   public float lightLevel() {

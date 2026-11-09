@@ -13,7 +13,7 @@
 
 class ScreenCalendar extends CoreScreen {
 
-  final float MAIN_LENGTH = 10.0;
+  final float MAIN_LENGTH = 15.0;
   final float OUTRO_LENGTH = 0.8;
 
   final float MARGIN = 24;        // pixels left of the block

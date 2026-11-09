@@ -39,3 +39,15 @@ String fmtDuration(LocalDateTime start, LocalDateTime end) {
   if (minutes % 60 == 0) return (minutes / 60) + " h";
   return (minutes / 60) + " h " + (minutes % 60) + " min";
 }
+
+/** Timer time: "4:05", "1:02:03", with tenths "4:05.3" */
+String fmtTimer(float seconds, boolean tenths) {
+  int totalTenths = (int) (seconds * 10);
+  int total = totalTenths / 10;
+  int h = total / 3600;
+  int m = (total / 60) % 60;
+  int s = total % 60;
+  String text = h > 0 ? h + ":" + nf(m, 2) + ":" + nf(s, 2) : m + ":" + nf(s, 2);
+  if (tenths) text += "." + (totalTenths % 10);
+  return text;
+}

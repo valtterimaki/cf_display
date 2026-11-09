@@ -4,6 +4,8 @@
 CoreConfig config;
 CoreScheduler scheduler;
 CoreTriggers triggers;
+CorePresence presence;
+CoreTimer timer;
 HwDevice hardware;
 DataStore store;
 
@@ -43,20 +45,36 @@ void setup() {
   if (debugVisible) {
     charBlockSelfCheck();
     calendarSelfCheck();
+    flowSelfCheck();
   }
 
   scheduler = new CoreScheduler();
+  presence = new CorePresence();
+  timer = new CoreTimer();
 
-  // Screens — registration order is the fallback cycle order
-  //scheduler.register("example",  () -> new ScreenExample());   // learning example (see screen_example.pde)
-  //scheduler.register("clock",    () -> new ScreenClock());
-  //scheduler.register("weather",  () -> new ScreenWeather());
-  scheduler.register("calendar", () -> new ScreenCalendar());
+  // Screens. Which one shows when is decided by CoreTriggers.
+  //scheduler.register("example",    () -> new ScreenExample());   // learning example (see screen_example.pde)
+  scheduler.register("home",          () -> new ScreenHome());
+  scheduler.register("sleep",         () -> new ScreenSleep());
+  scheduler.register("welcome",       () -> new ScreenPlaceholder("Welcome", "First wake of the day: special welcome content", 10));
+  scheduler.register("welcomeShort",  () -> new ScreenPlaceholder("Welcome back", "Shorter welcome after waking again", 5));
+  scheduler.register("settimer",      () -> new ScreenSetTimer());
+  scheduler.register("alarm",         () -> new ScreenAlarm());
+  scheduler.register("eventAlert",    () -> new ScreenPlaceholder("Event alert", "Soft reminder: an event starts soon or just started", 15));
+  scheduler.register("breakReminder", () -> new ScreenPlaceholder("Break reminder", "You have been here over 30 minutes", 15));
 
+  // The rotation (order and rules in CoreTriggers)
+  scheduler.register("calendar",      () -> new ScreenCalendar());
+  scheduler.register("tasks",         () -> new ScreenPlaceholder("Tasks", "Task list", 15));
+  scheduler.register("weather",       () -> new ScreenWeather());
+  scheduler.register("bus",           () -> new ScreenPlaceholder("Bus timetables", "Next departures", 15));
+  scheduler.register("presence",      () -> new ScreenPlaceholder("Presence timer", "How long you have been at the desk", 15));
+  scheduler.register("graphics",      () -> new ScreenPlaceholder("Nice graphics", "General nice graphics", 15));
+
+  scheduler.setHome("home");
   scheduler.setTransition(new TransitionBasic());
-  scheduler.start(now());
-
-  triggers = new CoreTriggers(store, scheduler);
+  triggers = new CoreTriggers(store, scheduler, presence, timer);
+  scheduler.start("sleep", now());   // presence wakes it on the first frame
 }
 
 void draw() {
@@ -64,8 +82,9 @@ void draw() {
 
   hardware.update(now());
   handleActions();
-  triggers.update(now());
+  triggers.update(now(), hardware.presence());
   scheduler.update(now());
+  drawBrowseLayer();
 
   debugEndFrame();
   if (debugVisible) drawDebugOverlay();
@@ -101,27 +120,50 @@ HwDevice createHardware(String type) {
   return new HwSimulated();
 }
 
-/** Global reactions to actions. Anything else goes to the current screen. */
+/**
+ * Routes input, in this order:
+ *   asleep          → any press wakes the device
+ *   alarm ringing   → any press clears it
+ *   set timer open  → the screen handles it
+ *   otherwise       → timer button opens set timer, knob browses screens
+ */
 void handleActions() {
   HwAction action;
   while ((action = hardware.pollAction()) != null) {
     println("[input] " + action);
-    switch (action.type) {
-      case SKIP:
-        scheduler.skip();
-        break;
-      case SHOW_SCREEN:
-        java.util.List<String> ids = scheduler.registeredIds();
-        if (action.value < ids.size()) {
-          scheduler.request(ids.get(action.value), CoreScheduler.PRIORITY_HIGH);
-        }
-        break;
-      case TOGGLE_DEBUG:
-        debugVisible = !debugVisible;
-        break;
-      default:
-        scheduler.sendToScreen(action);
-        break;
+    if (action.type == HwAction.Type.TOGGLE_DEBUG) {
+      debugVisible = !debugVisible;
+      continue;
+    }
+    timer.clearMissed();
+
+    if (triggers.isAsleep()) {
+      triggers.wake(now());
+    } else if (timer.isRinging()) {
+      timer.clearAlarm();
+      scheduler.interrupt("home", now());
+    } else if ("settimer".equals(scheduler.currentId())) {
+      scheduler.sendToScreen(action);
+    } else {
+      switch (action.type) {
+        case TIMER_BUTTON:
+          scheduler.interrupt("settimer", now());
+          break;
+        case ENCODER_TURN:
+          triggers.browse(action.value, now());
+          break;
+        case SKIP:
+          scheduler.skip();
+          break;
+        case SHOW_SCREEN:
+          if (action.value < CoreTriggers.ROTATION.size()) {
+            scheduler.interrupt(CoreTriggers.ROTATION.get(action.value), now());
+          }
+          break;
+        default:
+          scheduler.sendToScreen(action);
+          break;
+      }
     }
   }
 }

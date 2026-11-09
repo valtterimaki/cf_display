@@ -1,8 +1,9 @@
 # cf_display
 
 A desk info display: a Raspberry Pi with a 720×720 screen, running a Processing 4
-sketch that cycles through animated screens (clock, weather, calendar, …) and
-brings up relevant ones when something happens — like a meeting about to start.
+sketch that shows a home screen (clock + widgets) and every few minutes runs
+through a rotation of animated screens (calendar, weather, …), with reminders,
+a knob-set timer, and sleep when nobody is at the desk.
 
 Everything can be developed and tested on a normal computer: hardware (buttons,
 knob, LEDs, light sensor) is simulated with the keyboard and mouse, and data
@@ -31,9 +32,11 @@ Use `--build` instead of `--run` to only check that it compiles.
 | Key | Action |
 |---|---|
 | Space / → | Skip — current screen plays its outro early |
-| 1 – 9 | Queue a screen (1 = clock, 2 = weather, 3 = calendar) |
+| 1 – 9 | Jump to a rotation screen (1 = calendar, 2 = tasks, …) |
+| T | Timer button |
+| P | Presence on / off (starts on) |
 | D | Debug view on/off |
-| `,` / `.` or mouse wheel | Turn the knob |
+| `,` / `.` or mouse wheel | Turn the knob (sets the timer, or browses screens) |
 | Enter | Press the knob |
 | `-` / `+` | Simulated light level down / up |
 | Esc | Quit |
@@ -82,8 +85,8 @@ grouped by name:
 - `code/` — library jars (Processing's folder for them): ical4j for calendar feeds, plus what it needs
 
 Each screen goes through **intro → main → outro**, and decides itself when each
-phase ends. A scheduler picks what to show next: queued requests first (from
-buttons or triggers like an upcoming meeting), otherwise it cycles through screens.
+phase ends. Home shows for 3 minutes, then a visit: reminders that apply, then the
+whole rotation, then home again. Buttons, the timer alarm and sleep interrupt.
 
 ### Adding a screen
 

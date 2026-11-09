@@ -2,6 +2,24 @@
 
 A desk info display: screens of information and animation shown one after another on a 720×720 screen.
 
+## Screen flow
+
+**Home**:
+The screen everything returns to: the clock and widgets. Shown for 3 minutes, then a Visit.
+_Avoid_: Main screen, idle screen
+
+**Rotation**:
+The list of regular screens (calendar, tasks, weather…). Its base order is fixed; rules may reorder or skip screens for a Visit.
+_Avoid_: Cycle, playlist, queue
+
+**Visit**:
+What plays when Home times out: the reminders that apply, then the whole Rotation, then Home again.
+_Avoid_: Round, loop
+
+**Interrupt**:
+Switching to a screen right away, without a transition, dropping the rest of the Visit (timer button, alarm, sleep, wake, browsing).
+_Avoid_: Request (the old queued kind)
+
 ## Character graphics
 
 **Block**:

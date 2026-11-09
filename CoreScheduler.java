@@ -2,46 +2,49 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
  * Decides what is on screen.
  *
  * - Screens are registered with an id and a way to create them.
- * - Anything (data sources, buttons, timers) can queue a screen with request().
- *   Requests never interrupt: the current screen always finishes first.
- * - When a screen is DONE, the optional transition plays, then the next screen starts:
- *     1. the highest-priority queued request, or
- *     2. the fallback rule: cycle through registered screens in order.
+ * - One screen is home. When home is done, the visit planner (CoreTriggers) gives
+ *   the list of screens for a visit. They play one after another, then home again.
+ * - When a screen is DONE, the optional transition plays, then the next screen starts.
+ * - interrupt() switches right away (hard cut, no transition) and drops the rest of
+ *   the visit, so the display goes home after that screen.
  *
- * request() is thread-safe, so background data sources can call it directly.
+ * Everything here runs on the draw thread.
  */
 public class CoreScheduler {
 
-  public static final int PRIORITY_LOW = 0;
-  public static final int PRIORITY_NORMAL = 1;
-  public static final int PRIORITY_HIGH = 2;
-
   private final Map<String, Supplier<CoreScreen>> factories = new LinkedHashMap<>();
   private final Map<String, CoreScreen> keptInstances = new LinkedHashMap<>();
-  private final PriorityBlockingQueue<Request> queue = new PriorityBlockingQueue<>();
-  private final AtomicLong requestCounter = new AtomicLong();
+  private final List<String> visitPlan = new ArrayList<>();
 
+  private String homeId = null;
+  private Supplier<List<String>> visitPlanner = ArrayList::new;
   private CoreTransition transition = null;
 
   private CoreScreen current = null;
   private String currentId = null;
   private String nextId = null;
   private boolean inTransition = false;
-  private int cycleIndex = -1;
 
   // --- setup ---
 
-  /** Register a screen. Order of registration = order of the fallback cycle. */
   public void register(String id, Supplier<CoreScreen> factory) {
     factories.put(id, factory);
+  }
+
+  /** The screen everything returns to. */
+  public void setHome(String id) {
+    homeId = id;
+  }
+
+  /** Called when home is done: returns the screens of the next visit, in order. */
+  public void setVisitPlanner(Supplier<List<String>> planner) {
+    visitPlanner = planner;
   }
 
   /** Set the animation played between screens. null = none. */
@@ -49,24 +52,28 @@ public class CoreScheduler {
     this.transition = transition;
   }
 
-  /** Start showing screens. Call once after registering. */
-  public void start(float now) {
-    showScreen(pickNext(), now);
+  /** Start showing screens, beginning with the given one. Call once after registering. */
+  public void start(String id, float now) {
+    showScreen(id, now);
   }
 
   // --- control ---
 
-  /** Queue a screen to be shown after the current one. Ignored if already queued. */
-  public void request(String id, int priority) {
+  /** Switch to a screen right away, without a transition. The rest of the visit is dropped. */
+  public void interrupt(String id, float now) {
     if (!factories.containsKey(id)) {
       System.out.println("[scheduler] WARNING: unknown screen '" + id + "'");
       return;
     }
-    for (Request r : queue) {
-      if (r.id.equals(id)) return;
-    }
-    queue.add(new Request(id, priority, requestCounter.getAndIncrement()));
-    System.out.println("[scheduler] queued " + id + " (priority " + priority + ")");
+    visitPlan.clear();
+    inTransition = false;
+    System.out.println("[scheduler] interrupt: " + id);
+    showScreen(id, now);
+  }
+
+  /** Show a screen after the current one, before anything else that is planned. */
+  public void showNext(String id) {
+    visitPlan.add(0, id);
   }
 
   /** Ask the current screen to wrap up early. Does nothing during a transition. */
@@ -102,17 +109,12 @@ public class CoreScheduler {
     }
   }
 
-  /** Registered screen ids, in registration order. */
-  public List<String> registeredIds() {
-    return new ArrayList<>(factories.keySet());
-  }
-
   /** Pass an action to the current screen (ignored during a transition). */
   public void sendToScreen(HwAction action) {
     if (current != null && !inTransition) current.onAction(action);
   }
 
-  // --- info for the debug view ---
+  // --- info for the debug view and input routing ---
 
   public String currentId() {
     return currentId;
@@ -131,29 +133,20 @@ public class CoreScheduler {
     return nextId;
   }
 
-  /** Queued screen ids, highest priority first. */
-  public List<String> queuedIds() {
-    List<Request> sorted = new ArrayList<>(queue);
-    sorted.sort(null);
-    List<String> ids = new ArrayList<>();
-    for (Request r : sorted) ids.add(r.id);
-    return ids;
+  /** Screens still to come in this visit. */
+  public List<String> plannedIds() {
+    return new ArrayList<>(visitPlan);
   }
 
   // --- internals ---
 
   private String pickNext() {
-    Request queued = queue.poll();
-    if (queued != null) {
-      System.out.println("[scheduler] next: " + queued.id + " (from queue)");
-      return queued.id;
+    if (currentId.equals(homeId)) {
+      visitPlan.addAll(visitPlanner.get());
+      System.out.println("[scheduler] visit: " + String.join(", ", visitPlan));
     }
-    List<String> ids = new ArrayList<>(factories.keySet());
-    if (ids.isEmpty()) throw new IllegalStateException("No screens registered");
-    cycleIndex = (cycleIndex + 1) % ids.size();
-    String id = ids.get(cycleIndex);
-    System.out.println("[scheduler] next: " + id + " (cycle)");
-    return id;
+    if (visitPlan.isEmpty()) return homeId;
+    return visitPlan.remove(0);
   }
 
   private void showScreen(String id, float now) {
@@ -165,23 +158,5 @@ public class CoreScheduler {
     current = screen;
     currentId = id;
     current.begin(now);
-  }
-
-  /** A queued screen. Sorted by priority (high first), then by arrival (old first). */
-  private static class Request implements Comparable<Request> {
-    final String id;
-    final int priority;
-    final long order;
-
-    Request(String id, int priority, long order) {
-      this.id = id;
-      this.priority = priority;
-      this.order = order;
-    }
-
-    public int compareTo(Request other) {
-      if (priority != other.priority) return other.priority - priority;
-      return Long.compare(order, other.order);
-    }
   }
 }

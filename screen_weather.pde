@@ -4,7 +4,7 @@
 class ScreenWeather extends CoreScreen {
 
   final float INTRO_LENGTH = 1.2;
-  final float MAIN_LENGTH = 6.0;
+  final float MAIN_LENGTH = 15.0;
   final float OUTRO_LENGTH = 0.9;
 
   final float SUN_Y = 280;
