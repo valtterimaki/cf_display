@@ -45,6 +45,7 @@ void setup() {
   if (debugVisible) {
     charBlockSelfCheck();
     calendarSelfCheck();
+    homeSelfCheck();
     flowSelfCheck();
   }
 

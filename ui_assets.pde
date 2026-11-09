@@ -24,6 +24,11 @@ PFont fontDebug;   // 14 px — debug overlay (monospaced)
 final String CHAR_FONT_FILE = "fonts/IosevkaCustom-Regular.ttf";
 CharFont fontChar;   // 21 px — character blocks
 
+// Home clock texts (screen_home.pde)
+final String CLOCK_FONT_FILE = "fonts/IosevkaCustom-SemiExtended.ttf";
+PFont fontHomeTime;    // 60 px — digital time
+PFont fontHomeTimer;   // 40 px — timer countdown
+
 // Colors from the Figma designs. Plain color(r, g, b) values work everywhere too.
 final color BACKGROUND = #000000;   // what screens clear to; inverted Cells cut out in this
 final color GREEN      = #549680;
@@ -31,6 +36,9 @@ final color YELLOW     = #DCD356;
 final color RED        = #E33F5F;
 final color WHITE      = #FFFFFF;
 final color GRAY       = #B2B2B2;   // things that are over, e.g. ended events
+final color CLOCK_TIC    = #39637d;   // home clock dial marks
+final color CLOCK_SECOND = #570B0B;   // home clock second hand
+final color CLOCK_TIMER  = #AD8A5C;   // home clock timer arc and countdown
 
 CoreVideo videoRooster;   // 538×130 logo animation, plays once
 
@@ -49,6 +57,8 @@ void loadAssets() {
   fontDebug = createFont("Monospaced", 14);
 
   fontChar = loadCharFont(CHAR_FONT_FILE, 21);
+  fontHomeTime  = createFont(CLOCK_FONT_FILE, 60);
+  fontHomeTimer = createFont(CLOCK_FONT_FILE, 40);
 
   videoRooster = loadVideo("rooster", 50, false);
 

@@ -51,3 +51,11 @@ String fmtTimer(float seconds, boolean tenths) {
   if (tenths) text += "." + (totalTenths % 10);
   return text;
 }
+
+/** Home clock countdown: "2:13'27", "13'27" under an hour. */
+String fmtCountdown(float seconds) {
+  int total = (int) seconds;
+  int h = total / 3600;
+  int m = (total / 60) % 60;
+  return (h > 0 ? h + ":" + nf(m, 2) : str(m)) + "'" + nf(total % 60, 2);
+}
