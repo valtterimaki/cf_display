@@ -62,7 +62,7 @@ public class CoreTriggers {
     if (browseIndex >= 0 && now - lastBrowseTurn >= BROWSE_DELAY) {
       String id = browseList().get(browseIndex);
       browseIndex = -1;
-      scheduler.interrupt(id, now);
+      scheduler.switchTo(id, now);
     }
   }
 

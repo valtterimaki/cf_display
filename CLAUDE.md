@@ -103,7 +103,8 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
   visit once: event alert / break reminder if due, then `rotationNow()` (the rotation
   with its rules, e.g. bus only from 14:00 — add new reorder/skip rules there).
 - `scheduler.interrupt(id)` cuts in right away (no transition) and drops the rest of the
-  visit: timer button, alarm, sleep/wake, knob browsing.
+  visit: timer button, alarm, sleep/wake, leaving set timer. `switchTo(id)` does the same
+  with the transition: knob browsing, number keys.
 - Rules go in `CoreTriggers`, not in data sources. Sources only fetch; triggers only decide.
   Timer and presence state: `CoreTimer`, `CorePresence` (pure logic, self-checked in
   `debug_flow_check.pde`). Everything runs on the draw thread.

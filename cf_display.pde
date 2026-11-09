@@ -157,7 +157,7 @@ void handleActions() {
           break;
         case SHOW_SCREEN:
           if (action.value < CoreTriggers.ROTATION.size()) {
-            scheduler.interrupt(CoreTriggers.ROTATION.get(action.value), now());
+            scheduler.switchTo(CoreTriggers.ROTATION.get(action.value), now());
           }
           break;
         default:

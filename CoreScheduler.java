@@ -12,7 +12,8 @@ import java.util.function.Supplier;
  *   the list of screens for a visit. They play one after another, then home again.
  * - When a screen is DONE, the optional transition plays, then the next screen starts.
  * - interrupt() switches right away (hard cut, no transition) and drops the rest of
- *   the visit, so the display goes home after that screen.
+ *   the visit, so the display goes home after that screen. switchTo() does the same
+ *   with the transition.
  *
  * Everything here runs on the draw thread.
  */
@@ -61,14 +62,19 @@ public class CoreScheduler {
 
   /** Switch to a screen right away, without a transition. The rest of the visit is dropped. */
   public void interrupt(String id, float now) {
-    if (!factories.containsKey(id)) {
-      System.out.println("[scheduler] WARNING: unknown screen '" + id + "'");
-      return;
-    }
+    if (!isRegistered(id)) return;
     visitPlan.clear();
     inTransition = false;
     System.out.println("[scheduler] interrupt: " + id);
     showScreen(id, now);
+  }
+
+  /** Like interrupt(), but plays the transition first. */
+  public void switchTo(String id, float now) {
+    if (!isRegistered(id)) return;
+    visitPlan.clear();
+    System.out.println("[scheduler] switch to: " + id);
+    startTransition(id, now);
   }
 
   /** Show a screen after the current one, before anything else that is planned. */
@@ -97,16 +103,7 @@ public class CoreScheduler {
     if (current == null) return;
     current.update(now);
 
-    if (current.isDone()) {
-      nextId = pickNext();
-      if (transition != null) {
-        inTransition = true;
-        transition.begin(now, currentId, nextId);
-        System.out.println("[scheduler] transition " + currentId + " -> " + nextId);
-      } else {
-        showScreen(nextId, now);
-      }
-    }
+    if (current.isDone()) startTransition(pickNext(), now);
   }
 
   /** Pass an action to the current screen (ignored during a transition). */
@@ -147,6 +144,23 @@ public class CoreScheduler {
     }
     if (visitPlan.isEmpty()) return homeId;
     return visitPlan.remove(0);
+  }
+
+  private boolean isRegistered(String id) {
+    if (factories.containsKey(id)) return true;
+    System.out.println("[scheduler] WARNING: unknown screen '" + id + "'");
+    return false;
+  }
+
+  private void startTransition(String id, float now) {
+    nextId = id;
+    if (transition == null) {
+      showScreen(id, now);
+      return;
+    }
+    inTransition = true;
+    transition.begin(now, currentId, id);
+    System.out.println("[scheduler] transition " + currentId + " -> " + id);
   }
 
   private void showScreen(String id, float now) {

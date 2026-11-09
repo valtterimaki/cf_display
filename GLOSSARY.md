@@ -17,7 +17,7 @@ What plays when Home times out: the reminders that apply, then the whole Rotatio
 _Avoid_: Round, loop
 
 **Interrupt**:
-Switching to a screen right away, without a transition, dropping the rest of the Visit (timer button, alarm, sleep, wake, browsing).
+Switching to a screen right away, dropping the rest of the Visit (timer button, alarm, sleep, wake, browsing). Usually a hard cut; browsing plays the transition.
 _Avoid_: Request (the old queued kind)
 
 ## Character graphics

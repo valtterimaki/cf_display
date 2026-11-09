@@ -1,6 +1,7 @@
 // Set timer: opened with the timer button. The knob sets the time; the timer starts
 // 3 s after the last turn (CoreTimer). The timer button closes the screen, and so does
-// 15 s without input. Placeholder look until designed.
+// 15 s without input; both cut straight to home, without the transition.
+// Placeholder look until designed.
 
 class ScreenSetTimer extends CoreScreen {
 
@@ -32,7 +33,7 @@ class ScreenSetTimer extends CoreScreen {
     textFont(fontSmall);
     text("numbers + graphic (placeholder)", width / 2, height - 40);
 
-    if (now() - lastInput >= TIMEOUT) nextPhase();
+    if (now() - lastInput >= TIMEOUT) scheduler.interrupt("home", now());
   }
 
   void drawOutro() {
@@ -44,7 +45,7 @@ class ScreenSetTimer extends CoreScreen {
     if (action.type == HwAction.Type.ENCODER_TURN) timer.turn(action.value, now());
     if (action.type == HwAction.Type.TIMER_BUTTON) {
       timer.startNow(now());
-      requestOutro();
+      scheduler.interrupt("home", now());
     }
   }
 
