@@ -3,12 +3,14 @@
 //   |  ¦  |  ¦  |  ¦  |  ¦  |      ← 08:00–18:00, a tick every half hour
 //     ▬▬▬▬   ▬▬        ▬▬▬▬▬▬      ← one bar per event, overlapping ones in lanes below
 //   ─┄ TODAY◢ 22.10.2026 ┄┄─────────────
-//      ░ 🞂  09:00   🕓12 MINUTES ......1 h
+//      ░ 🞂  09:00   🕓12 MIN ..........1 h
 //      ░    DAILY STAND-UP
 // Intro: first the rooster logo animation plays centered (a video, see CoreVideo.java),
 // holds, then moves to the top left corner while scaling down. Then Cells appear in runs
 // of random length. Once all are shown, the timeline's ticks appear left to right, then its
 // events one by one (white, fading to their color), and last the now marker.
+// Main: when the list runs past the bottom of the screen, everything pans up after
+// PAN_DELAY until the END row is in view, and holds there.
 // Outro: rows disappear from the bottom up and the logo fades out; the timeline stays.
 
 class ScreenCalendar extends CoreScreen {
@@ -16,8 +18,8 @@ class ScreenCalendar extends CoreScreen {
   final float MAIN_LENGTH = 15.0;
   final float OUTRO_LENGTH = 0.8;
 
-  final float MARGIN = 24;        // pixels left of the block
-  final float BLOCK_TOP = 310;    // the block runs from here to the bottom of the screen
+  final float MARGIN = 24;        // logo corner offset, and the gap below END after the pan
+  final float BLOCK_TOP = 315;    // the block starts here, at x 0, and is as tall as its content
   final float LINE_HEIGHT = 1.0;  // the font's own line height, as in the Figma
   final int FIRST_ROW = 2;        // entries start below the header and one empty row
 
@@ -44,7 +46,6 @@ class ScreenCalendar extends CoreScreen {
   java.util.List<DataCalendar.Event> timelineEvents = new ArrayList<DataCalendar.Event>();
   int[] lanes = new int[0];       // lane of each timeline event, 0 = top
   ArrayList<CalendarEntry> entries = new ArrayList<CalendarEntry>();
-  int hiddenCount = 0;            // events that didn't fit: "+N MORE"
   boolean loading = false;        // no calendar fetched yet
   BrailleNoise loader;
 
@@ -57,12 +58,15 @@ class ScreenCalendar extends CoreScreen {
   final float EVENT_FADE = 0.1;     // each starts white and fades to its color
   final float MARKER_DROP = 0.3;    // last the now marker slides down into place
   final float MARKER_DROP_HEIGHT = 10;
+
+  // Pan in main, once everything is drawn
+  final float PAN_DELAY = 3.0;      // seconds of stillness before the pan
+  final float PAN_SPEED = 40;       // pixels per second
+  final float PAN_HOLD = 3.0;       // main lasts at least until this long after the pan ends
   float revealDoneAt = -1;          // tl.t() when the block was fully shown; the timeline starts then
 
   void start() {
-    int cols = floor((width - 2 * MARGIN) / fontChar.cellWidth());
-    int rows = floor((height - BLOCK_TOP) / fontChar.cellHeight(LINE_HEIGHT));
-    block = new CharBlock(fontChar, cols, rows, LINE_HEIGHT);
+    int cols = floor(width / fontChar.cellWidth());
     loader = new BrailleNoise(4, 1, 0.1, GREEN);
 
     // TODO: design a warning graphic/pattern for failed calendar fetches. Today the screen
@@ -72,24 +76,21 @@ class ScreenCalendar extends CoreScreen {
 
     // A snapshot: rows don't jump around mid-animation if new data arrives
     DataCalendar calendar = store.calendar();
-    if (calendar == null) {
-      loading = true;
-      return;
+    loading = calendar == null;
+    if (!loading) {
+      LocalDateTime now = CoreClock.now();
+      timelineEvents = calendar.today(now);
+      lanes = timelineLanes(timelineEvents);
+      for (DataCalendar.Event event : calendar.remainingToday(now)) {
+        entries.add(new CalendarEntry(cols - 1, event, entries.isEmpty()));
+      }
     }
-    LocalDateTime now = CoreClock.now();
-    timelineEvents = calendar.today(now);
-    lanes = timelineLanes(timelineEvents);
-    java.util.List<DataCalendar.Event> events = calendar.remainingToday(now);
 
-    // As many entries as fit, leaving one row for END / +N MORE.
-    // Each entry takes its 2 rows plus 1 (empty or overlap) below it.
-    int row = FIRST_ROW;
-    for (DataCalendar.Event event : events) {
-      if (row + CalendarEntry.HEIGHT + 1 >= rows) break;
-      entries.add(new CalendarEntry(cols - 2, event, entries.isEmpty()));
-      row += CalendarEntry.HEIGHT + 1;
-    }
-    hiddenCount = events.size() - entries.size();
+    // Rows as in writeBlock(): each entry takes its 2 rows plus 1 (empty or overlap) below it,
+    // "NO MORE EVENTS TODAY" takes 2, then the END row.
+    int rows = FIRST_ROW + 1;
+    if (!loading) rows += entries.isEmpty() ? 2 : entries.size() * (CalendarEntry.HEIGHT + 1);
+    block = new CharBlock(fontChar, cols, rows, LINE_HEIGHT);
   }
 
   void drawIntro() {
@@ -103,20 +104,21 @@ class ScreenCalendar extends CoreScreen {
     reveal.apply(block, contentT);
     if (reveal.isDone() && revealDoneAt < 0) revealDoneAt = tl.t();
     float timelineT = revealDoneAt < 0 ? -1 : tl.t() - revealDoneAt;   // negative: nothing shown yet
-    drawScreen(timelineT, 255);
+    drawScreen(timelineT, 255, 0);
     if (timelineT >= timelineIntroLength()) nextPhase();
   }
 
   void drawMain() {
     writeBlock();
-    drawScreen(timelineIntroLength(), 255);
-    if (tl.t() >= MAIN_LENGTH) nextPhase();
+    float pan = min(PAN_SPEED * max(0, tl.t() - PAN_DELAY), panDistance());
+    drawScreen(timelineIntroLength(), 255, pan);
+    if (tl.t() >= max(MAIN_LENGTH, PAN_DELAY + panDistance() / PAN_SPEED + PAN_HOLD)) nextPhase();
   }
 
   void drawOutro() {
     writeBlock();
     hide.apply(block, 1 - tl.progress(0, OUTRO_LENGTH));
-    drawScreen(timelineIntroLength(), 255 * (1 - tl.progress(0, OUTRO_LENGTH)));
+    drawScreen(timelineIntroLength(), 255 * (1 - tl.progress(0, OUTRO_LENGTH)), panDistance());
     if (tl.t() >= OUTRO_LENGTH) nextPhase();
   }
 
@@ -131,7 +133,7 @@ class ScreenCalendar extends CoreScreen {
     block.putRepeated(headerEnd, 0, block.cols - headerEnd, '─', GREEN);
 
     if (loading) {
-      int col = block.put(5, FIRST_ROW, "░   LOADING ", GREEN);
+      int col = block.put(3, FIRST_ROW, "░   LOADING ", GREEN);
       block.place(loader, col, FIRST_ROW);
       return;
     }
@@ -139,12 +141,12 @@ class ScreenCalendar extends CoreScreen {
     int row = FIRST_ROW;
     for (int i = 0; i < entries.size(); i++) {
       CalendarEntry entry = entries.get(i);
-      block.place(entry, 2, row);
+      block.place(entry, 0, row);
       row += entry.h;
       boolean overlapsNext = i + 1 < entries.size() && entry.event.end.isAfter(entries.get(i + 1).event.start);
       if (overlapsNext) {
         // "🮙🮙🮙 OVERLAP 🮙🮙🮙" in red
-        int col = block.put(5, row, "🮙🮙🮙", RED);
+        int col = block.put(3, row, "🮙🮙🮙", RED);
         col = block.putInverted(col, row, " OVERLAP ", RED);
         block.put(col, row, "🮙🮙🮙", RED);
       }
@@ -152,19 +154,30 @@ class ScreenCalendar extends CoreScreen {
     }
 
     if (entries.isEmpty()) {
-      int col = block.put(5, row, "░   ", GREEN);
+      int col = block.put(3, row, "░   ", GREEN);
       block.putInverted(col, row, " NO MORE EVENTS TODAY ", GREEN);
       row += 2;
     }
-    block.put(5, row, hiddenCount > 0 ? "░   +" + hiddenCount + " MORE" : "░   END", GREEN);
+    block.put(3, row, "░   END", GREEN);
   }
 
-  /** timelineT: seconds into the timeline's intro; timelineIntroLength() or more = all shown. */
-  void drawScreen(float timelineT, float logoAlpha) {
+  /**
+   * timelineT: seconds into the timeline's intro; timelineIntroLength() or more = all shown.
+   * pan: pixels everything is moved up.
+   */
+  void drawScreen(float timelineT, float logoAlpha, float pan) {
     background(BACKGROUND);
+    pushMatrix();
+    translate(0, -pan);
     drawLogo(logoIntroLength(), logoAlpha);
     drawTimeline(timelineT);
-    block.draw(MARGIN, BLOCK_TOP);
+    block.draw(0, BLOCK_TOP);
+    popMatrix();
+  }
+
+  /** How far to pan so the END row ends MARGIN above the bottom; 0 when it all fits. */
+  float panDistance() {
+    return max(0, BLOCK_TOP + block.rows * block.cellHeight + MARGIN - height);
   }
 
   /** Video, hold, move to the corner. */
@@ -328,8 +341,8 @@ void calendarSelfCheck() {
 
 /**
  * One event, two rows (𜴳 only when a call is attached):
- *   𜴳 ░ 🞂  09:00   🕓12 MINUTES ............1 h
- *      ░    DAILY STAND-UP
+ *    𜴳 ░ 🞂 09:00  🕓12 MIN .........1 h
+ *        ░   DAILY STAND-UP
  */
 class CalendarEntry extends CharComponent {
   static final int HEIGHT = 2;
@@ -345,7 +358,7 @@ class CalendarEntry extends CharComponent {
   }
 
   void write(CharBlock block) {
-    if (event.hasCall) block.put(0, 0, "𜴳", WHITE);
+    if (event.hasCall) block.put(1, 0, "𜴳", WHITE);
     block.put(3, 0, "░", GREEN);
     block.put(3, 1, "░", GREEN);
     block.put(5, 0, "🞂", GREEN);
@@ -368,12 +381,12 @@ class CalendarEntry extends CharComponent {
     block.put(7, 1, event.title.toUpperCase(), GREEN);   // too long: the component's edge cuts it off
   }
 
-  /** "NOW", "🕓12 MINUTES" or null. Worked out every frame, so it counts down live. */
+  /** "NOW", "🕓12 MIN" or null. Worked out every frame, so it counts down live. */
   String badgeText() {
     long seconds = java.time.Duration.between(CoreClock.now(), event.start).getSeconds();
     if (seconds <= 0) return "NOW";
-    long minutes = (seconds + 59) / 60;   // rounded up: "1 MINUTE" lasts until it starts
+    long minutes = (seconds + 59) / 60;   // rounded up: "1 MIN" lasts until it starts
     if (minutes > SOON_MINUTES) return null;
-    return "🕓" + minutes + (minutes == 1 ? " MINUTE" : " MINUTES");
+    return "🕓" + minutes + " MIN";
   }
 }

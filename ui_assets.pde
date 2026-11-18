@@ -22,7 +22,7 @@ PFont fontDebug;   // 14 px — debug overlay (monospaced)
 // Character blocks (char_block.pde). A custom Iosevka build with "Term" spacing:
 // every glyph is exactly one cell wide.
 final String CHAR_FONT_FILE = "fonts/IosevkaCustom-Regular.ttf";
-CharFont fontChar;   // 21 px — character blocks
+CharFont fontChar;   // 30 px — character blocks
 
 // Home clock texts (screen_home.pde)
 final String CLOCK_FONT_FILE = "fonts/IosevkaCustom-SemiExtended.ttf";
@@ -56,7 +56,7 @@ void loadAssets() {
   // only makes startup a couple of seconds longer.
   fontDebug = createFont("Monospaced", 14);
 
-  fontChar = loadCharFont(CHAR_FONT_FILE, 21);
+  fontChar = loadCharFont(CHAR_FONT_FILE, 30);
   fontHomeTime  = createFont(CLOCK_FONT_FILE, 60);
   fontHomeTimer = createFont(CLOCK_FONT_FILE, 40);
 

@@ -23,6 +23,8 @@ How the calendar data and screen work. Architecture rules are in [CLAUDE.md](../
 - The intro starts with the rooster logo video centered; after a hold it moves to the top
   left corner at half size, and only then the list and timeline appear. It fades in the outro.
 - The list shows `DataCalendar.remainingToday()`: today's not-ended, non-all-day events.
+  All of them: if the list runs past the screen bottom, everything pans up 3 s after the
+  intro until END is in view (`PAN_*` in `screen_calendar.pde`), and main lasts long enough.
 - Above the list, a timeline (plain shapes, not a Block) shows all of `today()` on an
   08:00–18:00 grid: ended events gray, overlaps red, events outside the grid drawn past its
   ends. Its intro starts once the list's Block is fully revealed.
