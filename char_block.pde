@@ -376,39 +376,68 @@ class RevealRandom extends BlockEffect {
  * pause between runs. Time-based: pass seconds since the reveal started (tl.t()),
  * and check isDone() to know when everything is shown.
  * Runs count only Cells with something in them, so empty areas don't take time.
+ * A new run first shows a raster of random braille characters (in the Cell's colors), then its
+ * characters. A run's raster steps forward each time a newer run appears, so a pause freezes
+ * everything. Each step has its own dot count (brightness); every Cell picks its own character.
  */
 class RevealChunks extends BlockEffect {
   // Pauses lean toward minInterval: 1 = even spread, 2 = squared (most near the minimum), 3 = stronger
-  final float INTERVAL_BIAS = 4;
+  final float INTERVAL_BIAS = 2;
+  final int[] RASTER_DOTS = { 4, 8 };   // braille dots per raster step (8 = ⣿, the only one with 8)
 
   final int minLength, maxLength;          // Cells per run
   final float minInterval, maxInterval;    // seconds between runs
   int shown = 0;           // how many non-empty Cells are visible
   float nextRun = 0;       // when the next run appears; the first one at once
   boolean done = false;
+  final IntList runEnds = new IntList();   // shown after each run
+  final ArrayList<ArrayList<Character>> brailleByDots = new ArrayList<ArrayList<Character>>();   // index = dot count
+  final int seed = int(random(Integer.MAX_VALUE));   // a different raster each reveal
 
   RevealChunks(int minLength, int maxLength, float minInterval, float maxInterval) {
     this.minLength = minLength;
     this.maxLength = maxLength;
     this.minInterval = minInterval;
     this.maxInterval = maxInterval;
+    // U+2800–U+28FF: one bit per dot, so the dot count is the number of 1 bits
+    for (int dots = 0; dots <= 8; dots++) brailleByDots.add(new ArrayList<Character>());
+    for (int bits = 0; bits < 256; bits++) brailleByDots.get(Integer.bitCount(bits)).add((char) (0x2800 + bits));
   }
 
   void apply(CharBlock block, float seconds) {
-    // A loop, not an if: after a slow frame several runs may be due at once
+    // A loop, not an if: after a slow frame several runs may be due at once.
+    // Runs keep coming after everything is shown: they step the last rasters to the end.
     while (seconds >= nextRun) {
       shown += int(random(minLength, maxLength + 1));
+      runEnds.append(shown);
       nextRun += lerp(minInterval, maxInterval, pow(random(1), INTERVAL_BIAS));
     }
 
     int count = 0;
+    int run = 0;   // the run the current Cell belongs to; Cells go in reading order, so it only grows
     for (int i = 0; i < block.chars.length; i++) {
       boolean empty = block.chars[i] == ' ' && block.bg[i] == 0;
       if (empty) continue;
-      if (count >= shown) block.set(i % block.cols, i / block.cols, ' ', 0, 0);
+      int col = i % block.cols, row = i / block.cols;
+      if (count >= shown) {
+        block.set(col, row, ' ', 0, 0);
+      } else {
+        while (count >= runEnds.get(run)) run++;
+        int step = runEnds.size() - 1 - run;   // newer runs since this one appeared
+        if (step < RASTER_DOTS.length) {
+          // Picked from the Cell and step, not random(): it must stay the same every frame
+          ArrayList<Character> options = brailleByDots.get(RASTER_DOTS[step]);
+          int hash = (i * 73856093) ^ (step * 19349663) ^ seed;
+          char glyph = options.get(Math.floorMod(hash, options.size()));
+          // Inverted Cells: the raster takes the background color, so the colored box fades in
+          if (block.bg[i] != 0) block.set(col, row, glyph, block.bg[i], 0);
+          else block.set(col, row, glyph, block.fg[i], 0);
+        }
+      }
       count++;
     }
-    done = shown >= count;
+    // Done when every Cell is shown and the last run's raster has stepped through
+    done = shown >= count && (count == 0 || runEnds.size() - 1 - run >= RASTER_DOTS.length);
   }
 
   /** True once every Cell is shown (as of the last apply). */
