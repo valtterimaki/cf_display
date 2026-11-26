@@ -17,6 +17,7 @@ Read the matching doc before working on:
 
 - **Calendar** (`DataCalendar*`, `screen_calendar.pde`, ICS feeds, the timeline): [docs/calendar.md](docs/calendar.md)
 - **Character blocks** (`char_block.pde`, any Block-based screen, the char font): [docs/char-blocks.md](docs/char-blocks.md)
+- **CRT effect** (`fx_crt.pde`, `CoreCrt`, `data/shaders/crt.frag`, `data/crt.json`): [docs/crt.md](docs/crt.md)
 - **Video** (`CoreVideo`, `data/video/`, frame export): [docs/video.md](docs/video.md)
 - **Raspberry Pi** (setup, deployment, performance to measure): [docs/pi.md](docs/pi.md)
 
@@ -58,7 +59,7 @@ When verifying changes: build, then run for a while and read the console log
 
 | Prefix | Kind | Examples |
 |---|---|---|
-| `Core*.java` | engine | `CoreScreen`, `CoreScheduler`, `CoreTimeline`, `CoreEase`, `CoreClock`, `CoreConfig`, `CoreTriggers`, `CoreTransition`, `CoreVideo` |
+| `Core*.java` | engine | `CoreCrt`, `CoreScreen`, `CoreScheduler`, `CoreTimeline`, `CoreEase`, `CoreClock`, `CoreConfig`, `CoreTriggers`, `CoreTransition`, `CoreVideo` |
 | `Hw*.java` | hardware | `HwAction`, `HwDevice`, `HwSimulated`, `HwPi` |
 | `Data*.java` | data | `DataStore`, `DataSource`, `DataWeather`, `DataWeatherFake`, `DataCalendarIcs` |
 | `screen_*.pde` | one screen per file | `screen_clock.pde` → `class ScreenClock` |
@@ -66,6 +67,7 @@ When verifying changes: build, then run for a while and read the console log
 | `ui_*.pde` | shared drawing/formatting helpers, assets | `ui_helpers.pde`, `ui_assets.pde` |
 | `char_*.pde` | character blocks | `char_block.pde` |
 | `debug_*.pde` | debug view, capture mode | `debug_overlay.pde`, `debug_capture.pde` |
+| `fx_*.pde` | full-screen post effects | `fx_crt.pde` |
 
 `cf_display.pde` is only wiring: settings/setup/draw, registering screens, creating
 sources and hardware, routing input. Keep logic out of it.
@@ -120,6 +122,7 @@ CoreScheduler ──▶ current screen: INTRO → MAIN → OUTRO → DONE ──
 ### Hardware
 
 - Code reacts to `HwAction`s, never to raw keys/pins. Add new actions to `HwAction`.
+  Exception: the CRT panel (C key) reads the keyboard directly, as a dev tool for any hardware.
 - `HwSimulated` (desktop, keyboard/mouse) and `HwPi` (GPIO) chosen by `"hardware"` in config.
 
 ## Conventions

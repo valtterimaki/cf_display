@@ -220,10 +220,11 @@ Toggled by the `TOGGLE_DEBUG` action. Drawn last, on top of everything. Shows:
 fps and draw time, current screen + phase + time in phase, queue contents,
 hardware state (simulated LEDs, light level, encoder), data source statuses.
 
-### 2.10 Future CRT shader — leave room, don't build
+### 2.10 CRT shader
 
-Screens draw straight to the main canvas. A post-processing shader can later be
-applied at the end of `draw()` (e.g. `filter(crtShader)`) without changing screens.
+Screens draw straight to the main canvas; `drawCrt()` runs a composite-signal shader over
+it at the end of `draw()` with `filter()`, without changing screens. Settings in
+`data/crt.json`, tuned live with the C panel. See [docs/crt.md](docs/crt.md).
 
 ### 2.11 Assets (`ui_assets.pde`)
 
@@ -331,7 +332,7 @@ them when done. Details can live in a topic doc, linked from here.
 - **GPIO library** for `HwPi`.
 - **Analog light sensors:** ADC or I²C sensor (user will decide).
 - **Sleep mode** behaviour and whether the display backlight can be controlled.
-- **CRT shader** design and its performance on the Pi 3B.
+- **CRT shader** performance on the Pi 3B ([docs/crt.md](docs/crt.md) has the steps).
 - **Pi model:** 3B unless performance forces an upgrade.
 - **Scheduler rules** beyond simple cycling.
 - **Button → action mapping.**

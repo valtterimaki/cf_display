@@ -62,6 +62,8 @@ void loadAssets() {
 
   videoRooster = loadVideo("rooster", 50, false);
 
+  loadCrt();   // CRT effect settings and shader source (fx_crt.pde)
+
   println("[assets] loaded in " + (millis() - startMillis) + " ms");
 }
 

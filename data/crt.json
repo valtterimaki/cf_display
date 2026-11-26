@@ -1,0 +1,13 @@
+{
+  "nonlin": 0.05,
+  "leak": 0.28,
+  "clipHi": 1.3,
+  "chromaDelay": 2,
+  "chromaGain": 1,
+  "taps": 4,
+  "noise": 0.06,
+  "chromaBlur": 1.25,
+  "hue": 0,
+  "pal": 1,
+  "enabled": 1
+}

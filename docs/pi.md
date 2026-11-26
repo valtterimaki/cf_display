@@ -18,6 +18,6 @@ Step 8 of [PLAN.md](../PLAN.md). **Not done yet**: the Pi has no OS installed.
 - [ ] Run the display at the same refresh rate as `FRAME_RATE`, otherwise motion is uneven
 - [ ] Measure video decode time on the 3B (debug view; ~10 ms per 720×720 frame on the Mac, budget 33 ms at 30 fps). Too slow → smaller frames drawn scaled up, or more decode threads
 - [ ] Measure character block draw time on the 3B (debug view "blocks … ms"; ~0.3 ms for the 42×21 demo on the Mac)
-- [ ] Measure FPS with the debug view; later test the CRT shader's performance on the 3B
+- [ ] Measure FPS with the debug view; then the CRT shader at taps 2/4/6 ([crt.md](crt.md#pi-3b))
 - [ ] Choose GPIO library (Pi4J / processing.io / other) and implement `HwPi` (buttons, encoder, LEDs, light sensor via ADC or I²C)
 - [ ] If commits are ever made on the Pi: `scripts/check.sh` needs `PROCESSING=<path>` there

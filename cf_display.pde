@@ -22,6 +22,9 @@ void settings() {
   } else {
     size(720, 720, P2D);
   }
+  // Real 720×720 pixels also on a Retina Mac (Processing 4.5 would use 1440×1440),
+  // so the Mac shows what the Pi shows: same CRT dot size, same shader cost
+  pixelDensity(1);
 }
 
 void setup() {
@@ -86,9 +89,11 @@ void draw() {
   triggers.update(now(), hardware.presence());
   scheduler.update(now());
   drawBrowseLayer();
+  drawCrt();   // after everything on screen, before the debug texts so they stay readable
 
   debugEndFrame();
   if (debugVisible) drawDebugOverlay();
+  drawCrtPanel();
   captureUpdate();
 }
 
@@ -169,9 +174,10 @@ void handleActions() {
   }
 }
 
-// Keyboard and mouse only matter in simulated mode.
+// Keyboard and mouse only matter in simulated mode (and for the CRT panel).
 
 void keyPressed() {
+  if (crtPanelKey(key, keyCode)) return;   // C opens the CRT panel, with any hardware
   if (hardware instanceof HwSimulated) {
     ((HwSimulated) hardware).keyPressed(key, keyCode);
   }
