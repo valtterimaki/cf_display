@@ -381,8 +381,9 @@ class RevealRandom extends BlockEffect {
  * everything. Each step has its own dot count (brightness); every Cell picks its own character.
  */
 class RevealChunks extends BlockEffect {
-  // Pauses lean toward minInterval: 1 = even spread, 2 = squared (most near the minimum), 3 = stronger
-  final float INTERVAL_BIAS = 2;
+  // Pauses are short (bursts) or long, rarely in between
+  final float LONG_PAUSE_CHANCE = 0.2;   // share of pauses near maxInterval; the rest are near minInterval
+  final float EXTREME_BIAS = 4;          // how hard pauses push to their end: 1 = even spread, higher = closer
   final int[] RASTER_DOTS = { 4, 8 };   // braille dots per raster step (8 = ⣿, the only one with 8)
 
   final int minLength, maxLength;          // Cells per run
@@ -410,7 +411,7 @@ class RevealChunks extends BlockEffect {
     while (seconds >= nextRun) {
       shown += int(random(minLength, maxLength + 1));
       runEnds.append(shown);
-      nextRun += lerp(minInterval, maxInterval, pow(random(1), INTERVAL_BIAS));
+      nextRun += lerp(minInterval, maxInterval, randomPause());
     }
 
     int count = 0;
@@ -438,6 +439,12 @@ class RevealChunks extends BlockEffect {
     }
     // Done when every Cell is shown and the last run's raster has stepped through
     done = shown >= count && (count == 0 || runEnds.size() - 1 - run >= RASTER_DOTS.length);
+  }
+
+  /** 0..1 between minInterval and maxInterval: near 0 or near 1, seldom in the middle. */
+  float randomPause() {
+    float fromEnd = pow(random(1), EXTREME_BIAS) * 0.5;   // 0..0.5, mostly near 0
+    return random(1) < LONG_PAUSE_CHANCE ? 1 - fromEnd : fromEnd;
   }
 
   /** True once every Cell is shown (as of the last apply). */

@@ -49,7 +49,7 @@ class ScreenCalendar extends CoreScreen {
   boolean loading = false;        // no calendar fetched yet
   BrailleNoise loader;
 
-  RevealChunks reveal = new RevealChunks(1, 16, 0.01, 0.3);   // 1–24 Cells every 10–300 ms
+  RevealChunks reveal = new RevealChunks(1, 12, 0.01, 0.3);   // 1–12 Cells every 10–300 ms
   RevealLines hide = new RevealLines();
 
   // Timeline intro, in seconds
